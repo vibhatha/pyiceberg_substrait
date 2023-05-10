@@ -89,7 +89,3 @@ def test_visitor():
     
     validate_visitor = RelValidateVisitor(files=files, formats=file_formats)
     visit_and_update(editor.rel, validate_visitor)
-    
-    
-    
-        
