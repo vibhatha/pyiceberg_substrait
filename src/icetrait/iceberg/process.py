@@ -245,5 +245,5 @@ class IcebergFileDownloader:
                 save_file_path = os.path.join(self._local_path, filename + file_ext)
                 pq.write_table(arrow_table, save_file_path)
                 download_paths.append(save_file_path)
-                extensions.append(file_ext)
+                extensions.append(file_ext.split(".")[1])
         return download_paths, extensions
