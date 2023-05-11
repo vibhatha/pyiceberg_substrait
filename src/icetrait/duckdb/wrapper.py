@@ -28,21 +28,24 @@ class DuckdbSubstrait:
         self._formats = None
         self._updated_plan = None
         self._local_path = local_path
+        self._con = None
+        self._initialize()
         self._get_table_name()
+        self._update_with_local_file_paths()
         
     @property
     def plan(self):
         return self._substrait_plan
     
-    def initialize(self):
-        con = duckdb.connect()
-        con.install_extension("substrait")
-        con.load_extension("substrait")
+    def _initialize(self):
+        self._con = duckdb.connect()
+        self._con.install_extension("substrait")
+        self._con.load_extension("substrait")
 
-        con.install_extension("httpfs")
-        con.load_extension("httpfs")
+        self._con.install_extension("httpfs")
+        self._con.load_extension("httpfs")
         
-        return con
+        return self._con
     
     @property
     def table_name(self):
@@ -68,6 +71,8 @@ class DuckdbSubstrait:
     
     def execute(self):
         # run the updated Substrait plan with DuckDb
-        pass
+        proto_bytes = self._updated_plan.SerializeToString()
+        query_result = self.con.from_substrait(proto=proto_bytes)
+        return query_result
 
         
