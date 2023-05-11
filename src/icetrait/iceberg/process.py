@@ -246,4 +246,4 @@ class IcebergFileDownloader:
                 pq.write_table(arrow_table, save_file_path)
                 download_paths.append(save_file_path)
                 extensions.append(file_ext)
-        return download_paths, file_ext
+        return download_paths, extensions
