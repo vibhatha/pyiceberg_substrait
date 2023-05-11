@@ -74,5 +74,3 @@ class DuckdbSubstrait:
         proto_bytes = self._updated_plan.SerializeToString()
         query_result = self.con.from_substrait(proto=proto_bytes)
         return query_result
-
-        

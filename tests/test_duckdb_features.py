@@ -55,10 +55,3 @@ class TestDuckdbSubstrait:
         duckdb_substrait = DuckdbSubstrait(proto_bytes, "default", "/home/iceberg/notebooks/s3")
         results = duckdb_substrait.execute()
         print(results)
-        
-        
-        
-        
-        
-        
-        

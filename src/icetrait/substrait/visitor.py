@@ -67,7 +67,6 @@ class RelVisitor(ABC):
     def visit_sort(self, rel: SortRel):
         pass
 
-    
 class RelUpdateVisitor(RelVisitor):
     
     def __init__(self, files: List[str], formats: List[str]):
@@ -126,7 +125,6 @@ class RelUpdateVisitor(RelVisitor):
     
     def visit_sort(self, rel: SortRel):
         pass
-
 
 class ExtractTableVisitor(RelVisitor):
     

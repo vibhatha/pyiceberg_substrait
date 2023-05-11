@@ -200,7 +200,6 @@ class ProcessSubstrait:
                 raise Exception("Invalid relation!")
         return None
 
-
 class IcebergFileDownloader:
     """
     Note that this can be tested in an environment which supports
@@ -248,7 +247,3 @@ class IcebergFileDownloader:
                 download_paths.append(save_file_path)
                 extensions.append(file_ext)
         return download_paths, file_ext
-            
-    
-        
-    
