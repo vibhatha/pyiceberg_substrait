@@ -98,7 +98,6 @@ class RelUpdateVisitor(RelVisitor):
         pass
     
     def visit_read(self, read_rel: ReadRel):
-        print("visit read")
         local_files = read_rel.LocalFiles()
         for file, file_format in zip(self._files, self._formats):
             file_or_files = local_files.FileOrFiles()
