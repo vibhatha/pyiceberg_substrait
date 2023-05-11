@@ -72,5 +72,5 @@ class DuckdbSubstrait:
     def execute(self):
         # run the updated Substrait plan with DuckDb
         proto_bytes = self._updated_plan.SerializeToString()
-        query_result = self.con.from_substrait(proto=proto_bytes)
+        query_result = self._con.from_substrait(proto=proto_bytes)
         return query_result
