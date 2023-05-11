@@ -89,3 +89,20 @@ def test_visitor():
     
     validate_visitor = RelValidateVisitor(files=files, formats=file_formats)
     visit_and_update(editor.rel, validate_visitor)
+
+
+def test_metadata_extraction():
+    tb = ibis.table([("id", "date"), ("bid", "float"), ("ask", "int32"), ("symbol", "int64")], "t",)
+    query = tb.select(["id", "bid", "ask", "symbol"])
+    compiler = SubstraitCompiler()
+    protobuf_msg = compiler.compile(query).SerializeToString()
+
+    from icetrait.substrait.visitor import ExtractTableVisitor, extract_rel_from_plan, visit_and_update
+    
+    extract_visitor = ExtractTableVisitor()
+    rel = extract_rel_from_plan(protobuf_msg)
+    visit_and_update(rel, extract_visitor)
+    
+    print(extract_visitor.table_names)
+
+    assert extract_visitor.table_names == ['t']

@@ -1,6 +1,20 @@
+import os
 from typing import List
 from substrait.gen.proto.plan_pb2 import Plan
 from substrait.gen.proto.algebra_pb2 import ReadRel
+
+from pyiceberg.catalog import load_catalog
+from pyiceberg.catalog import Catalog
+from pyiceberg.table import Table as IcebergTable
+
+from pyiceberg.io.pyarrow import PyArrowFileIO
+
+import pyarrow.dataset as ds
+import pyarrow.parquet as pq
+
+from icetrait.utils.files import get_filename_and_extension
+
+ONE_MEGABYTE = 1024 * 1024
 
 class ProcessSubstrait:
     
@@ -185,3 +199,51 @@ class ProcessSubstrait:
             else:
                 raise Exception("Invalid relation!")
         return None
+
+class IcebergFileDownloader:
+    """
+    Note that this can be tested in an environment which supports
+    Iceberg Catalogs.
+    """
+    def __init__(self, catalog:str, table:str, local_path:str):
+        self._catalog = load_catalog(catalog)
+        self._table = self._catalog.load_table(table)
+        self._local_path = local_path
+        
+    @property
+    def catalog(self) -> Catalog:
+        return self._catalog
+    
+    @property
+    def table(self) -> IcebergTable:
+        return self._table
+    
+    def download(self):
+        sc = self.table.scan()
+        table = sc.table
+        tasks = sc.plan_files()
+        scheme, _ = PyArrowFileIO.parse_location(table.location())
+
+        if isinstance(table.io, PyArrowFileIO):
+            fs = table.io.get_fs(scheme)
+        download_paths = []
+        extensions = []
+        for task in tasks:    
+            _, parquet_file_path = PyArrowFileIO.parse_location(task.file.file_path)
+            arrow_format = ds.ParquetFileFormat(pre_buffer=True, buffer_size=(ONE_MEGABYTE * 8))
+            with fs.open_input_file(parquet_file_path) as fin:
+                fragment = arrow_format.make_fragment(fin)
+                physical_schema = fragment.physical_schema
+                pyarrow_filter = None
+                fragment_scanner = ds.Scanner.from_fragment(
+                    fragment=fragment,
+                    schema=physical_schema,
+                    filter=pyarrow_filter,
+                )
+                arrow_table = fragment_scanner.to_table()
+                filename, file_ext = get_filename_and_extension(parquet_file_path)
+                save_file_path = os.path.join(self._local_path, filename + file_ext)
+                pq.write_table(arrow_table, save_file_path)
+                download_paths.append(save_file_path)
+                extensions.append(file_ext)
+        return download_paths, file_ext

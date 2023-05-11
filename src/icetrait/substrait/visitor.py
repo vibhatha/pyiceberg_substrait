@@ -67,7 +67,6 @@ class RelVisitor(ABC):
     def visit_sort(self, rel: SortRel):
         pass
 
-    
 class RelUpdateVisitor(RelVisitor):
     
     def __init__(self, files: List[str], formats: List[str]):
@@ -126,8 +125,55 @@ class RelUpdateVisitor(RelVisitor):
     
     def visit_sort(self, rel: SortRel):
         pass
+
+class ExtractTableVisitor(RelVisitor):
     
+    def __init__(self) -> None:
+        self._table_names = None
+        
+    @property
+    def table_names(self):
+        return self._table_names
+        
+    def visit_aggregate(self, rel: AggregateRel):
+        pass
     
+    def visit_cross(self, rel: CrossRel):
+        pass
+    
+    def visit_fetch(self, rel: FetchRel):
+        pass
+    
+    def visit_filter(self, rel: FilterRel):
+        pass
+    
+    def visit_hashjoin(self, rel: HashJoinRel):
+        pass
+    
+    def visit_join(self, rel: JoinRel):
+        pass
+    
+    def visit_merge(self, rel: MergeJoinRel):
+        pass
+    
+    def visit_project(self, rel: ProjectRel):
+        pass
+    
+    def visit_read(self, read_rel: ReadRel):
+        named_table = read_rel.named_table
+        self._table_names = named_table.names
+        
+    def visit_set(self, rel: SetRel):
+        pass
+    
+    def visit_sort(self, rel: SortRel):
+        pass
+    
+
+# TODO: Think of a better way to do the job done by
+# SubstraitPlanEditor vs extract_rel_from_plan
+# The class and function does the same
+
 class SubstraitPlanEditor:
     
     def __init__(self, plan: SubstraitPlan):
@@ -149,6 +195,19 @@ class SubstraitPlanEditor:
                     rel = rel_root.input
                     return rel
         return None
+    
+def extract_rel_from_plan(plan: SubstraitPlan):
+    substrait_plan = SubstraitPlan()
+    substrait_plan.ParseFromString(plan)
+    if substrait_plan.relations:
+            relations = substrait_plan.relations
+            if relations:
+                if relations[0].HasField("root"):
+                    rel_root = relations[0].root
+                    rel = rel_root.input
+                    return rel
+    return None
+    
     
 @singledispatch
 def visit_and_update(rel, visitor: RelUpdateVisitor) -> RelType:
@@ -173,7 +232,7 @@ def _(rel: Rel, visitor: RelUpdateVisitor) -> RelType:
     if rel.HasField("project"):
         visit_and_update(rel.project, visitor)
     elif rel.HasField("read"):
-        updated_read_rel = visit_and_update(rel.read, visitor)
+        visit_and_update(rel.read, visitor)
     elif rel.HasField("set"):
         visit_and_update(rel.set, visitor)
     elif rel.HasField("sort"):
@@ -192,12 +251,3 @@ def _(rel: ProjectRel, visitor: RelUpdateVisitor) -> RelType:
     visitor.visit_project(rel)
     if rel.HasField("input"):
         visit_and_update(rel.input, visitor)
-        
-@visit_and_update.register(AggregateRel)
-def _(rel: AggregateRel, visitor: RelUpdateVisitor) -> RelType:
-    visitor.visit_aggregate(rel)
-    if rel.HasField("input"):
-        visit_and_update(rel.input, visitor)
-
-
-    
