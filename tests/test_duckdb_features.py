@@ -51,6 +51,11 @@ class TestDuckdbSubstrait:
         assert result_table == self.table
         
     def test_duckdb_wrapper(self):
+        """
+        NOTE: This test case only passes if Iceberg is configured with REST catalog
+        and MinIO blobstore. 
+        """
+        self.con.execute(query='CREATE TABLE SampleTable (id int,name text);')
         proto_bytes = self.con.get_substrait("SELECT * FROM SampleTable;").fetchone()[0]
         duckdb_substrait = DuckdbSubstrait(proto_bytes, "default", "/home/iceberg/notebooks/s3")
         results = duckdb_substrait.execute()

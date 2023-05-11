@@ -49,7 +49,7 @@ class DuckdbSubstrait:
     
     @property
     def table_name(self):
-        return self._get_table_name(self)
+        return self._get_table_name()
     
     def _get_table_name(self):
         extract_visitor = ExtractTableVisitor()
