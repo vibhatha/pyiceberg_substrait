@@ -32,7 +32,6 @@ class DuckdbSubstrait:
         self._local_path = local_path
         self._con = None
         self._initialize()
-        self._get_table_name()
         
     @property
     def plan(self):
