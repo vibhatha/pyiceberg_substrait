@@ -67,6 +67,46 @@ class RelVisitor(ABC):
     def visit_sort(self, rel: SortRel):
         pass
 
+class IcebergSubstraitRelVisitor(RelVisitor):
+    
+    def visit_aggregate(self, rel: AggregateRel):
+        pass
+    
+    def visit_cross(self, rel: CrossRel):
+        pass
+    
+    def visit_fetch(self, rel: FetchRel):
+        pass
+    
+    def visit_filter(self, rel: FilterRel):
+        pass
+    
+    def visit_hashjoin(self, rel: HashJoinRel):
+        pass
+    
+    def visit_join(self, rel: JoinRel):
+        pass
+    
+    def visit_merge(self, rel: MergeJoinRel):
+        pass
+    
+    def visit_project(self, rel: ProjectRel):
+        pass
+    
+    @abstractmethod
+    def visit_read(self, rel: ReadRel):
+        """_summary_
+
+        Args:
+            rel (ReadRel): _description_
+        """
+    
+    def visit_set(self, rel: SetRel):
+        pass
+    
+    def visit_sort(self, rel: SortRel):
+        pass
+
 class RelUpdateVisitor(RelVisitor):
     
     def __init__(self, files: List[str], formats: List[str]):
@@ -294,3 +334,11 @@ class NamedTableUpdateVisitor(RelVisitor):
 
         def visit_sort(self, rel):
             pass
+
+class SchemaUpdateVisitor(IcebergSubstraitRelVisitor):
+    
+    def __init__(self, base_schema) -> None:
+        self._base_schema = base_schema
+    
+    def visit_read(self, rel: ReadRel):
+        pass
