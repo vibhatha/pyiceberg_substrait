@@ -64,7 +64,7 @@ class DuckdbSubstrait:
         # with s3 urls to local files 
         # Issue: https://github.com/duckdb/duckdb/discussions/7252
         table_name = self.table_name
-        downloader = IcebergFileDownloader(catalog='default', table=table_name, local_path=self._local_path)
+        downloader = IcebergFileDownloader(catalog=self._catalog_name, table=table_name, local_path=self._local_path)
         self._files, self._formats = downloader.download()
         editor = SubstraitPlanEditor(self._plan)
         full_table_name = f"{self._duckdb_schema}.{table_name}"
