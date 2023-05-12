@@ -6,8 +6,54 @@ import pytest
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from icetrait.substrait.visitor import RelVisitor, SubstraitPlanEditor, visit_and_update, RelUpdateVisitor
+from icetrait.substrait.visitor import RelVisitor, NamedTableUpdateVisitor, SubstraitPlanEditor, visit_and_update, RelUpdateVisitor
 from icetrait.duckdb.wrapper import DuckdbSubstrait
+
+class RelValidateVisitor(RelVisitor):
+        def __init__(self, files, formats, table_name):
+            self._files = files
+            self._formats = formats
+            self._table_name = table_name
+
+        def visit_aggregate(self, rel):
+            pass
+
+        def visit_cross(self, rel):
+            pass
+
+        def visit_fetch(self, rel):
+            pass
+
+        def visit_filter(self, rel):
+            pass
+
+        def visit_join(self, rel):
+            pass
+
+        def visit_hashjoin(self, rel):
+            pass
+
+        def visit_merge(self, rel):
+            pass
+
+        def visit_project(self, rel):
+            pass
+
+        def visit_read(self, read_rel):
+            if self._files and self._formats:
+                local_files = read_rel.local_files
+                for id, file in enumerate(local_files.items):
+                    assert self._files[id] == file.uri_file
+                    # TODO: https://github.com/vibhatha/pyiceberg_substrait/issues/3
+            elif self._table_name:
+                named_table = read_rel.named_table
+                assert named_table.names[0] == self._table_name
+
+        def visit_set(self, rel):
+            pass
+
+        def visit_sort(self, rel):
+            pass
 
 @pytest.fixture(scope="class", autouse=True)
 def setup_and_teardown(request):
@@ -57,6 +103,25 @@ class TestDuckdbSubstrait:
         """
         self.con.execute(query='CREATE TABLE SampleTable (id int,name text);')
         proto_bytes = self.con.get_substrait("SELECT * FROM SampleTable;").fetchone()[0]
-        duckdb_substrait = DuckdbSubstrait(proto_bytes, "default", "/home/iceberg/notebooks/s3")
-        results = duckdb_substrait.execute()
-        print(results)
+        duckdb_substrait = DuckdbSubstrait(proto_bytes, "default", "/home/iceberg/notebooks/s3", "")
+        duckdb_substrait.execute()
+
+    def test_duckdb_schema(self):
+        create_schema = "CREATE SCHEMA myschema;"
+        self.con.execute(create_schema)
+        self.con.execute(query='CREATE TABLE myschema.SampleTable (id int,name text);')
+        proto_bytes = self.con.get_substrait("SELECT * FROM myschema.SampleTable;").fetchone()[0]
+        editor = SubstraitPlanEditor(proto_bytes)
+        full_table_name = "myschema.SampleTable"
+        named_table_update_visitor = NamedTableUpdateVisitor(full_table_name)
+        visit_and_update(editor.rel, named_table_update_visitor)
+
+        table_name_validate_visitor = RelValidateVisitor(files=None, formats=None, table_name=full_table_name)
+        visit_and_update(editor.rel, table_name_validate_visitor)
+
+        files = ["s3://mydata.parquet"]
+        formats = ["parquet"]
+        files_update_visitor = RelUpdateVisitor(files=files, formats=formats)
+        visit_and_update(editor.rel, files_update_visitor)
+        files_update_visitor_validate_visitor = RelValidateVisitor(files=files, formats=formats, table_name=None)
+        visit_and_update(editor.rel, files_update_visitor_validate_visitor)
