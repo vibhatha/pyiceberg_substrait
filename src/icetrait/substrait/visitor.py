@@ -250,3 +250,47 @@ def _(rel: ProjectRel, visitor: RelUpdateVisitor) -> RelType:
     visitor.visit_project(rel)
     if rel.HasField("input"):
         visit_and_update(rel.input, visitor)
+
+
+## Helper Visitor to update the schema information in a DuckDB generated
+## Substrait plan. Even when schema is included in a query, it doesn't generate
+## namedTable with the `schema_name.table_name` format. 
+
+class NamedTableUpdateVisitor(RelVisitor):
+        def __init__(self, table_name):
+            self._table_name = table_name
+
+        def visit_aggregate(self, rel):
+            pass
+
+        def visit_cross(self, rel):
+            pass
+
+        def visit_fetch(self, rel):
+            pass
+
+        def visit_filter(self, rel):
+            pass
+
+        def visit_join(self, rel):
+            pass
+
+        def visit_hashjoin(self, rel):
+            pass
+
+        def visit_merge(self, rel):
+            pass
+
+        def visit_project(self, rel):
+            pass
+
+        def visit_read(self, read_rel):
+            named_table = read_rel.NamedTable()
+            named_table.names.append(self._table_name)
+            read_rel.named_table.CopyFrom(named_table)
+
+        def visit_set(self, rel):
+            pass
+
+        def visit_sort(self, rel):
+            pass

@@ -11,6 +11,7 @@ from substrait.gen.proto.plan_pb2 import Plan as SubstraitPlan
 
 from icetrait.iceberg.process import IcebergFileDownloader
 from icetrait.substrait.visitor import (ExtractTableVisitor,
+                                        NamedTableUpdateVisitor,
                                         RelUpdateVisitor,
                                         SubstraitPlanEditor,
                                         extract_rel_from_plan,
@@ -19,11 +20,12 @@ from icetrait.substrait.visitor import (ExtractTableVisitor,
 
 class DuckdbSubstrait:
     
-    def __init__(self, plan: SubstraitPlan, catalog_name:str, local_path:str):
+    def __init__(self, plan: SubstraitPlan, catalog_name:str, local_path:str, duckdb_schema:str):
         self._plan = plan
         self._substrait_plan = SubstraitPlan()
         self._substrait_plan.ParseFromString(self._plan)
         self._catalog_name = catalog_name
+        self._duckdb_schema = duckdb_schema
         self._files = None
         self._formats = None
         self._updated_plan = None
@@ -61,12 +63,15 @@ class DuckdbSubstrait:
         # this method would update the passed Substrait plan
         # with s3 urls to local files 
         # Issue: https://github.com/duckdb/duckdb/discussions/7252
-        downloader = IcebergFileDownloader(catalog='default', table=self.table_name, local_path=self._local_path)
+        table_name = self.table_name
+        downloader = IcebergFileDownloader(catalog=self._catalog_name, table=table_name, local_path=self._local_path)
         self._files, self._formats = downloader.download()
         editor = SubstraitPlanEditor(self._plan)
+        full_table_name = f"{self._duckdb_schema}.{table_name}"
+        named_table_update_visitor = NamedTableUpdateVisitor(full_table_name)
+        visit_and_update(editor.rel, named_table_update_visitor)
         update_visitor = RelUpdateVisitor(files=self._files, formats=self._formats)
         visit_and_update(editor.rel, update_visitor)
-    
         self._updated_plan = editor.plan
     
     def execute(self):
