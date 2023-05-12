@@ -26,6 +26,7 @@ class DuckdbSubstrait:
         self._substrait_plan.ParseFromString(self._plan)
         self._catalog_name = catalog_name
         self._duckdb_schema = duckdb_schema
+        self._table_name = None
         self._files = None
         self._formats = None
         self._updated_plan = None
@@ -93,6 +94,6 @@ class DuckdbSubstrait:
 
 def run_query(plan: SubstraitPlan, catalog_name:str, local_path:str, duckdb_schema:str):
     wrapper = DuckdbSubstrait(plan=plan, catalog_name=catalog_name, local_path=local_path, duckdb_schema=duckdb_schema)
-    wrapper.update_schema()
+    wrapper.update_named_table_with_schema()
     wrapper.update_with_local_file_paths()
     return wrapper.execute()
