@@ -125,3 +125,19 @@ class TestDuckdbSubstrait:
         visit_and_update(editor.rel, files_update_visitor)
         files_update_validate_visitor = RelValidateVisitor(files=files, formats=formats, table_name=None)
         visit_and_update(editor.rel, files_update_validate_visitor)
+
+    def test_substrait_base_schema(self):
+        create_schema = "CREATE SCHEMA myschema;"
+        self.con.execute(create_schema)
+        self.con.execute(query='CREATE TABLE myschema.SampleTable (id int,name text);')
+        self.con.execute(query="INSERT INTO myschema.SampleTable (id, name) VALUES (1, 'A'), (2, 'B'), (3, 'C');")
+        select_query = "SELECT * FROM myschema.SampleTable LIMIT 1;"
+        proto_bytes = self.con.get_substrait(select_query).fetchone()[0]
+        editor = SubstraitPlanEditor(proto_bytes)
+        print(editor.plan)
+        res = self.con.execute(select_query)
+        res_ar_tb = res.fetch_arrow_table()
+        print(res_ar_tb.to_pandas())
+        
+        
+        

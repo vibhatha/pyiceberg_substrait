@@ -50,19 +50,23 @@ class DuckdbSubstrait:
     
     @property
     def table_name(self):
-        return self._get_table_name()
+        if not self._table_name:
+            self.set_table_name_from_plan()
+        return self._table_name
     
-    def _get_table_name(self):
+    @property
+    def table_name_with_schema(self):
+        return f"{self._duckdb_schema}.{self.table_name}"
+    
+    def set_table_name_from_plan(self):
         extract_visitor = ExtractTableVisitor()
         rel = extract_rel_from_plan(self._plan)
         visit_and_update(rel, extract_visitor)
-        return extract_visitor.table_names[0]
+        self._table_name = extract_visitor.table_names[0]
 
-    def update_schema(self):
-        table_name = self.table_name
-        full_table_name = f"{self._duckdb_schema}.{table_name}"
+    def update_named_table_with_schema(self):
         editor = SubstraitPlanEditor(self._plan)
-        named_table_update_visitor = NamedTableUpdateVisitor(full_table_name)
+        named_table_update_visitor = NamedTableUpdateVisitor(self.table_name_with_schema)
         visit_and_update(editor.rel, named_table_update_visitor)
         self._updated_plan = editor.plan
 
@@ -70,8 +74,7 @@ class DuckdbSubstrait:
         # this method would update the passed Substrait plan
         # with s3 urls to local files 
         # Issue: https://github.com/duckdb/duckdb/discussions/7252
-        table_name = self.table_name
-        downloader = IcebergFileDownloader(catalog=self._catalog_name, table=table_name, local_path=self._local_path)
+        downloader = IcebergFileDownloader(catalog=self._catalog_name, table=self._table_name, local_path=self._local_path)
         self._files, self._formats = downloader.download()
         update_visitor = RelUpdateVisitor(files=self._files, formats=self._formats)
         editor = SubstraitPlanEditor(self._updated_plan.SerializeToString())
