@@ -123,5 +123,5 @@ class TestDuckdbSubstrait:
         formats = ["parquet"]
         files_update_visitor = RelUpdateVisitor(files=files, formats=formats)
         visit_and_update(editor.rel, files_update_visitor)
-        files_update_visitor_validate_visitor = RelValidateVisitor(files=files, formats=formats, table_name=None)
-        visit_and_update(editor.rel, files_update_visitor_validate_visitor)
+        files_update_validate_visitor = RelValidateVisitor(files=files, formats=formats, table_name=None)
+        visit_and_update(editor.rel, files_update_validate_visitor)
