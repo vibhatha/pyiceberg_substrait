@@ -74,7 +74,7 @@ class DuckdbSubstrait:
         # this method would update the passed Substrait plan
         # with s3 urls to local files 
         # Issue: https://github.com/duckdb/duckdb/discussions/7252
-        downloader = IcebergFileDownloader(catalog=self._catalog_name, table=self._table_name, local_path=self._local_path)
+        downloader = IcebergFileDownloader(catalog=self._catalog_name, table=self.table_name_with_schema, local_path=self._local_path)
         self._files, self._formats = downloader.download()
         update_visitor = RelUpdateVisitor(files=self._files, formats=self._formats)
         editor = SubstraitPlanEditor(self._updated_plan.SerializeToString())
