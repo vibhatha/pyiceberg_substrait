@@ -279,8 +279,22 @@ class TestDuckdbSubstrait:
             def visit_merge(self, rel):
                 pass
 
-            def visit_project(self, rel):
-                pass
+            def visit_project(self, project_rel):
+                from substrait.gen.proto.algebra_pb2 import Expression
+                if project_rel.expressions:
+                    expressions = project_rel.expressions
+                    len_out_schm = len(self.output_schema)
+                    len_exprs = len(expressions)
+                    if len_exprs < len_out_schm:
+                        start_index = len_exprs
+                        for _ in range(len_out_schm - len_exprs):
+                            expression = Expression()
+                            field_reference = expression.FieldReference()
+                            root_reference = Expression.FieldReference.RootReference()
+                            field_reference.direct_reference.struct_field.field = start_index
+                            field_reference.root_reference.CopyFrom(root_reference)
+                            expression.selection.CopyFrom(field_reference)
+                            project_rel.expressions.append(expression)
 
             def visit_read(self, read_rel):
                 from substrait.gen.proto.algebra_pb2 import Expression
@@ -304,9 +318,6 @@ class TestDuckdbSubstrait:
 
         
         visit_and_update(editor.rel, ReadRelProjectVisitor(['A', 'B', 'C']))
-        print(editor.rel)
-        
-        print(editor.plan)
         
         class ReadRelProjectValidateVisitor(RelVisitor):
             def __init__(self, expected_items:int=-1):
@@ -333,13 +344,14 @@ class TestDuckdbSubstrait:
             def visit_merge(self, rel):
                 pass
 
-            def visit_project(self, rel):
-                pass
+            def visit_project(self, project_rel):
+                if project_rel.expressions:
+                    expressions = project_rel.expressions
+                    assert len(expressions) == self._expected_items
 
             def visit_read(self, read_rel):
                 if read_rel.HasField("projection"):
                     if read_rel.projection.HasField("select"):
-                        print(dir(read_rel.projection.select))
                         if read_rel.projection.select.struct_items:
                             projection = read_rel.projection
                             struct_items = projection.select.struct_items
@@ -352,4 +364,3 @@ class TestDuckdbSubstrait:
                 pass
 
         visit_and_update(editor.rel, ReadRelProjectValidateVisitor(3))
-        print(editor.plan)

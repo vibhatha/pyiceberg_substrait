@@ -137,8 +137,22 @@ class RelUpdateVisitor(RelVisitor):
     def visit_merge(self, rel: MergeJoinRel):
         pass
     
-    def visit_project(self, rel: ProjectRel):
-        pass
+    def visit_project(self, project_rel: ProjectRel):
+        from substrait.gen.proto.algebra_pb2 import Expression
+        if project_rel.expressions:
+            expressions = project_rel.expressions
+            len_out_schm = len(self.output_schema)
+            len_exprs = len(expressions)
+            if len_exprs < len_out_schm:
+                start_index = len_exprs
+                for _ in range(len_out_schm - len_exprs):
+                    expression = Expression()
+                    field_reference = expression.FieldReference()
+                    root_reference = Expression.FieldReference.RootReference()
+                    field_reference.direct_reference.struct_field.field = start_index
+                    field_reference.root_reference.CopyFrom(root_reference)
+                    expression.selection.CopyFrom(field_reference)
+                    project_rel.expressions.append(expression)
     
     def visit_read(self, read_rel: ReadRel):
         # TODO: optimize this via a Visitor
@@ -285,7 +299,6 @@ def _(rel: Rel, visitor: RelUpdateVisitor) -> RelType:
     elif rel.HasField("cross"):
         visit_and_update(rel.cross, visitor)
     elif rel.HasField("fetch"):
-        print(">>>>>>> rel.HasField('fetch')")
         visit_and_update(rel.fetch, visitor)
     elif rel.HasField("filter"):
         visit_and_update(rel.filter, visitor)
