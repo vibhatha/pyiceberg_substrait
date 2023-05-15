@@ -310,7 +310,7 @@ class IcebergFileDownloader:
                         field_id = field.field_id
                         name = self._find_field(file_project_schema, field_id)
                         if name is None:
-                            empty_table.add_column(index, field.name, [[]])
+                            empty_table = empty_table.add_column(index, field.name, [[]])
                             name = field.name
                             print("Name is none: ", name)
                         projected_empty_table_col_names.append(name)
