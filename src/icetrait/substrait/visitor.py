@@ -170,9 +170,10 @@ class RelUpdateVisitor(RelVisitor):
         if self._output_names:
             if read_rel.HasField("projection"):
                 if read_rel.projection.HasField("select"):
-                    if read_rel.projection.select.HasField("struct_items"):
+                    if read_rel.projection.select.struct_items:
                         from substrait.gen.proto.algebra_pb2 import Expression
-                        struct_items = read_rel.projection.select.struct_items
+                        projection = read_rel.projection
+                        struct_items = projection.select.struct_items
                         len_out_schm = len(self._output_names)
                         len_struct_items = len(struct_items)
                         if len_struct_items < len_out_schm:
@@ -181,7 +182,7 @@ class RelUpdateVisitor(RelVisitor):
                                 struct_item = Expression.MaskExpression.StructItem()
                                 struct_item.field = starting_index
                                 starting_index = starting_index + 1
-                                read_rel.projection.select.struct_items.append(struct_item)
+                                projection.select.struct_items.append(struct_item)
         
 
     def visit_set(self, rel: SetRel):

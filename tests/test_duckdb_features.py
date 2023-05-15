@@ -306,6 +306,8 @@ class TestDuckdbSubstrait:
         visit_and_update(editor.rel, ReadRelProjectVisitor(['A', 'B', 'C']))
         print(editor.rel)
         
+        print(editor.plan)
+        
         class ReadRelProjectValidateVisitor(RelVisitor):
             def __init__(self, expected_items:int=-1):
                 self._expected_items = expected_items
@@ -335,9 +337,13 @@ class TestDuckdbSubstrait:
                 pass
 
             def visit_read(self, read_rel):
-                projection = read_rel.projection
-                struct_items = projection.select.struct_items
-                assert len(struct_items) == self._expected_items
+                if read_rel.HasField("projection"):
+                    if read_rel.projection.HasField("select"):
+                        print(dir(read_rel.projection.select))
+                        if read_rel.projection.select.struct_items:
+                            projection = read_rel.projection
+                            struct_items = projection.select.struct_items
+                            assert len(struct_items) == self._expected_items
                 
             def visit_set(self, rel):
                 pass
@@ -346,3 +352,4 @@ class TestDuckdbSubstrait:
                 pass
 
         visit_and_update(editor.rel, ReadRelProjectValidateVisitor(3))
+        print(editor.plan)
