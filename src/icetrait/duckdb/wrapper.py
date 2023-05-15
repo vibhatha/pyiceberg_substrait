@@ -69,6 +69,19 @@ class DuckdbSubstrait:
         named_table_update_visitor = NamedTableUpdateVisitor(self.table_name_with_schema)
         visit_and_update(editor.rel, named_table_update_visitor)
         self._updated_plan = editor.plan
+        
+    def extract_info_from_input_plan(self):
+        """_summary_
+        TODO: 
+        From the existing plan we can gather important information. 
+        It contains the required output_names which are an accurate
+        representation of ouput columns of the data. 
+        
+        The names here and the names in the file are different. 
+        1. First compare original plan root_rel.names vs projected_schema and file_schema
+        
+        """
+        pass
 
     def update_with_local_file_paths(self):
         # this method would update the passed Substrait plan

@@ -296,6 +296,7 @@ class IcebergFileDownloader:
                 
                 # for each file the names should be the same so just extract values for the first file
                 if len(root_rel_names) == 0:
+                    # TODO: this logic becomes faulty when the user ask for partial amount of columns
                     for field in projected_schema.fields:
                         root_rel_names.append(field.name)
                         
@@ -314,7 +315,6 @@ class IcebergFileDownloader:
                             # the accurate data type
                             empty_table = empty_table.add_column(index, field.name, [[]])
                             name = field.name
-                            print("Name is none: ", name)
                         projected_empty_table_col_names.append(name)
                         print("Name is not none: ", name)
                     
@@ -329,6 +329,9 @@ class IcebergFileDownloader:
                     schema_visitor = SchemaUpdateVisitor()
                     visit_and_update(editor.rel, schema_visitor)
                     base_schema = schema_visitor.base_schema
+                    print("*" * 80)
+                    print(projected_schema)
+                    print("*" * 80)
                 
         return download_paths, extensions, base_schema, root_rel_names
 
