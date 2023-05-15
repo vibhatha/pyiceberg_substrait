@@ -302,6 +302,8 @@ class IcebergFileDownloader:
                 # get base_schema
                 if base_schema is None:
                     empty_table = pa.Table.from_pylist([], physical_schema)
+                    print("Table before update")
+                    print(empty_table)
                     struct = projected_schema.as_struct()
                     projected_empty_table_col_names = []
                     for index, field in enumerate(struct.fields):
@@ -310,8 +312,11 @@ class IcebergFileDownloader:
                         if name is None:
                             empty_table.add_column(index, field.name, [[]])
                             name = field.name
+                            print("Name is none: ", name)
                         projected_empty_table_col_names.append(name)
+                        print("Name is not none: ", name)
                     
+                    print("Table after update")
                     print(empty_table)
                     
                     project_empty_table = empty_table.select(projected_empty_table_col_names)
