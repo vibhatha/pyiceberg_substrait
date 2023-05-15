@@ -302,7 +302,7 @@ class IcebergFileDownloader:
                             name = file_project_schema.find_field(field_id).name
                         except ValueError:
                             #TODO: issue when schema updated with new column but data has not been updated
-                            empty_table.add_column(index, name, [])
+                            empty_table.add_column(index, name, [[]])
                         projected_empty_table_col_names.append(name)
                     
                     project_empty_table = empty_table.select(projected_empty_table_col_names)
