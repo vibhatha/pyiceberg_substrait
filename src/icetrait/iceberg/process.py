@@ -228,6 +228,14 @@ class IcebergFileDownloader:
     def table(self) -> IcebergTable:
         return self._table
     
+    def _find_field(self, file_project_schema, field_id):
+        name = None
+        try:
+            name = file_project_schema.find_field(field_id).name
+        except ValueError:
+            return name
+        return name
+    
     def download(self):
         sc = self.table.scan()
         table = sc.table
@@ -298,19 +306,10 @@ class IcebergFileDownloader:
                     projected_empty_table_col_names = []
                     for index, field in enumerate(struct.fields):
                         field_id = field.field_id
-                        found_field = file_project_schema.find_field(field_id)
-                        if found_field:
-                            name = file_project_schema.find_field(field_id).name
-                        else:
+                        name = self._find_field(file_project_schema, field_id)
+                        if name is None:
                             empty_table.add_column(index, field.name, [[]])
                             name = field.name
-                        # try:
-                        #     name = file_project_schema.find_field(field_id).name
-                        # except ValueError:
-                        #     #TODO: issue when schema updated with new column but data has not been updated
-                        #     print("ValueError: ", index, field_id, field.name, name)
-                        #     empty_table.add_column(index, field.name, [[]])
-                        #     name = field.name
                         projected_empty_table_col_names.append(name)
                     
                     print(empty_table)
