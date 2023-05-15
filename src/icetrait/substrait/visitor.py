@@ -110,10 +110,11 @@ class IcebergSubstraitRelVisitor(RelVisitor):
 class RelUpdateVisitor(RelVisitor):
     ## TODO: rename this to ReadRelUpdateVisitor
     
-    def __init__(self, files: List[str], formats: List[str], base_schema=None):
+    def __init__(self, files: List[str], formats: List[str], base_schema=None, output_names=None):
         self._files = files
         self._formats = formats
         self._base_schema = base_schema
+        self._output_names = output_names
     
     def visit_aggregate(self, rel: AggregateRel):
         pass
@@ -140,6 +141,7 @@ class RelUpdateVisitor(RelVisitor):
         pass
     
     def visit_read(self, read_rel: ReadRel):
+        # TODO: optimize this via a Visitor
         local_files = read_rel.LocalFiles()
         for file, file_format in zip(self._files, self._formats):
             file_or_files = local_files.FileOrFiles()
@@ -163,6 +165,24 @@ class RelUpdateVisitor(RelVisitor):
         
         if self._base_schema:
             read_rel.base_schema.CopyFrom(self._base_schema)
+        
+        # TODO: optimize this logic using a visitor
+        if self._output_names:
+            if read_rel.HasField("projection"):
+                if read_rel.projection.HasField("select"):
+                    if read_rel.projection.select.HasField("struct_items"):
+                        from substrait.gen.proto.algebra_pb2 import Expression
+                        struct_items = read_rel.projection.select.struct_items
+                        len_out_schm = len(self._output_names)
+                        len_struct_items = len(struct_items)
+                        if len_struct_items < len_out_schm:
+                            starting_index = len_struct_items
+                            for i in range(len_out_schm - len_struct_items):
+                                struct_item = Expression.MaskExpression.StructItem()
+                                struct_item.field = starting_index
+                                starting_index = starting_index + 1
+                                read_rel.projection.select.struct_items.append(struct_item)
+        
 
     def visit_set(self, rel: SetRel):
         pass

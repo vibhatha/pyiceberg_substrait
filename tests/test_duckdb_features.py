@@ -1,5 +1,6 @@
 import shutil, tempfile
 from os import path
+from typing import List
 
 import duckdb
 import pytest
@@ -231,3 +232,117 @@ class TestDuckdbSubstrait:
                     rel_root.names[:] = new_names
                     
         assert editor.plan.relations[0].root.names == new_names
+        
+    
+    def test_base_schema_updator_end_to_end(self):
+        from icetrait.substrait.visitor import SchemaUpdateVisitor
+        
+        my_arrow = pa.Table.from_pydict({'a':[42, 20, 21], 'b': ["a", "b", "c"]})
+        editor = arrow_table_to_substrait(my_arrow)
+        visitor = SchemaUpdateVisitor()
+        visit_and_update(editor.rel, visitor)
+        
+        base_schema = visitor.base_schema
+        
+        files = ["s3://file.parquet"]
+        formats = ["parquet"]
+        update_visitor = RelUpdateVisitor(files=files, formats=formats, base_schema=base_schema)
+        editor = arrow_table_to_substrait(my_arrow)
+        visit_and_update(editor.rel, update_visitor)
+        
+        class ReadRelProjectVisitor(RelVisitor):
+            def __init__(self, output_schema: List[str]):
+                self._output_schema = output_schema
+                
+            @property
+            def output_schema(self):
+                return self._output_schema
+
+            def visit_aggregate(self, rel):
+                pass
+
+            def visit_cross(self, rel):
+                pass
+
+            def visit_fetch(self, rel):
+                pass
+
+            def visit_filter(self, rel):
+                pass
+
+            def visit_join(self, rel):
+                pass
+
+            def visit_hashjoin(self, rel):
+                pass
+
+            def visit_merge(self, rel):
+                pass
+
+            def visit_project(self, rel):
+                pass
+
+            def visit_read(self, read_rel):
+                from substrait.gen.proto.algebra_pb2 import Expression
+                projection = read_rel.projection
+                struct_items = projection.select.struct_items
+                len_out_schm = len(self.output_schema)
+                len_struct_items = len(struct_items)
+                if len_struct_items < len_out_schm:
+                    starting_index = len_struct_items
+                    for _ in range(len_out_schm - len_struct_items):
+                        struct_item = Expression.MaskExpression.StructItem()
+                        struct_item.field = starting_index
+                        starting_index = starting_index + 1
+                        projection.select.struct_items.append(struct_item)
+
+            def visit_set(self, rel):
+                pass
+
+            def visit_sort(self, rel):
+                pass
+
+        
+        visit_and_update(editor.rel, ReadRelProjectVisitor(['A', 'B', 'C']))
+        print(editor.rel)
+        
+        class ReadRelProjectValidateVisitor(RelVisitor):
+            def __init__(self, expected_items:int=-1):
+                self._expected_items = expected_items
+
+            def visit_aggregate(self, rel):
+                pass
+
+            def visit_cross(self, rel):
+                pass
+
+            def visit_fetch(self, rel):
+                pass
+
+            def visit_filter(self, rel):
+                pass
+
+            def visit_join(self, rel):
+                pass
+
+            def visit_hashjoin(self, rel):
+                pass
+
+            def visit_merge(self, rel):
+                pass
+
+            def visit_project(self, rel):
+                pass
+
+            def visit_read(self, read_rel):
+                projection = read_rel.projection
+                struct_items = projection.select.struct_items
+                assert len(struct_items) == self._expected_items
+                
+            def visit_set(self, rel):
+                pass
+
+            def visit_sort(self, rel):
+                pass
+
+        visit_and_update(editor.rel, ReadRelProjectValidateVisitor(3))
