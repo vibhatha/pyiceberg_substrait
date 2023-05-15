@@ -364,3 +364,20 @@ class TestDuckdbSubstrait:
                 pass
 
         visit_and_update(editor.rel, ReadRelProjectValidateVisitor(3))
+
+    def test_duckdb_additional_column_query(self):
+        self.con.execute(query='CREATE TABLE SampleTable (id int,name text, age int);')
+        proto_bytes = self.con.get_substrait("SELECT id, name, age FROM SampleTable;").fetchone()[0]
+        editor = SubstraitPlanEditor(proto_bytes)
+
+        files = [self.data_path]
+        file_formats = ["parquet"]
+        update_visitor = RelUpdateVisitor(files=files, formats=file_formats)
+        visit_and_update(editor.rel, update_visitor)
+        
+        proto_bytes = editor.plan.SerializeToString()
+        exp_err_msg = r"Binder Error: Positional reference 3 out of range \(total 2 columns\)"
+        with pytest.raises(duckdb.BinderException, match=exp_err_msg):   
+            self.con.from_substrait(proto=proto_bytes)
+            
+        

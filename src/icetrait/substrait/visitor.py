@@ -139,7 +139,7 @@ class RelUpdateVisitor(RelVisitor):
     
     def visit_project(self, project_rel: ProjectRel):
         from substrait.gen.proto.algebra_pb2 import Expression
-        if project_rel.expressions:
+        if project_rel.expressions and self._output_names:
             expressions = project_rel.expressions
             len_out_schm = len(self._output_names)
             len_exprs = len(expressions)
