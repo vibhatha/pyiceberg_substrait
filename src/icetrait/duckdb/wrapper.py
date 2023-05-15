@@ -76,7 +76,7 @@ class DuckdbSubstrait:
         # Issue: https://github.com/duckdb/duckdb/discussions/7252
         downloader = IcebergFileDownloader(catalog=self._catalog_name, table=self.table_name_with_schema, local_path=self._local_path)
         self._files, self._formats, base_schema, output_names = downloader.download()
-        update_visitor = RelUpdateVisitor(files=self._files, formats=self._formats, base_schema=base_schema)
+        update_visitor = RelUpdateVisitor(files=self._files, formats=self._formats, base_schema=base_schema, output_names=output_names)
         editor = SubstraitPlanEditor(self._updated_plan.SerializeToString())
         visit_and_update(editor.rel, update_visitor)
         # update output names
