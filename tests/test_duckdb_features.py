@@ -6,8 +6,10 @@ import pytest
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from icetrait.substrait.visitor import RelVisitor, NamedTableUpdateVisitor, SubstraitPlanEditor, visit_and_update, RelUpdateVisitor
+from icetrait.substrait.visitor import RelVisitor, NamedTableUpdateVisitor, SubstraitPlanEditor, visit_and_update, RelUpdateVisitor, IcebergSubstraitRelVisitor
 from icetrait.duckdb.wrapper import DuckdbSubstrait
+
+from icetrait.iceberg.process import arrow_table_to_substrait
 
 class RelValidateVisitor(RelVisitor):
         def __init__(self, files, formats, table_name):
@@ -154,6 +156,42 @@ class TestDuckdbSubstrait:
         editor = SubstraitPlanEditor(proto_bytes)
         print(editor.plan)
         
+        
+    def test_schema_updator(self):
+        from icetrait.substrait.visitor import SchemaUpdateVisitor
+        
+        my_arrow = pa.Table.from_pydict({'a':[42, 20, 21], 'b': ["a", "b", "c"]})
+        editor = arrow_table_to_substrait(my_arrow)
+        visitor = SchemaUpdateVisitor()
+        visit_and_update(editor.rel, visitor)
+        base_schema = visitor.base_schema
+        
+        assert base_schema.names == ['a', 'b']
+        struct = base_schema.struct
+        types = struct.types
+        assert types[0].HasField("i64")
+        assert types[1].HasField("varchar")
+        assert types[0].i64.nullability == 1
+        assert types[1].varchar.nullability == 1
+        
+    def test_schema_updator_empty_table(self):
+        from icetrait.substrait.visitor import SchemaUpdateVisitor
+        a = pa.array([], type=pa.int64())
+        b = pa.array([], type=pa.utf8())
+        my_arrow = pa.Table.from_arrays([a, b], names=["a", "b"])
+        editor = arrow_table_to_substrait(my_arrow)
+        visitor = SchemaUpdateVisitor()
+        visit_and_update(editor.rel, visitor)
+        base_schema = visitor.base_schema
+        
+        assert base_schema.names == ['a', 'b']
+        struct = base_schema.struct
+        types = struct.types
+        assert types[0].HasField("i64")
+        assert types[1].HasField("varchar")
+        assert types[0].i64.nullability == 1
+        assert types[1].varchar.nullability == 1
+            
         
         
         

@@ -259,6 +259,7 @@ def _(rel: Rel, visitor: RelUpdateVisitor) -> RelType:
     elif rel.HasField("cross"):
         visit_and_update(rel.cross, visitor)
     elif rel.HasField("fetch"):
+        print(">>>>>>> rel.HasField('fetch')")
         visit_and_update(rel.fetch, visitor)
     elif rel.HasField("filter"):
         visit_and_update(rel.filter, visitor)
@@ -277,7 +278,8 @@ def _(rel: Rel, visitor: RelUpdateVisitor) -> RelType:
     elif rel.HasField("sort"):
         visit_and_update(rel.sort, visitor)
     else:
-        raise Exception(f"Invalid relation! {type(rel)}")
+        val = rel.HasField("fetch")
+        raise Exception(f"Invalid relation! {val}")
 
 
 @visit_and_update.register(ReadRel)
@@ -294,6 +296,7 @@ def _(rel: ProjectRel, visitor: RelUpdateVisitor) -> RelType:
 
 @visit_and_update.register(FetchRel)
 def _(rel: FetchRel, visitor: RelUpdateVisitor):
+    print("@visit_and_update.register(FetchRel)")
     visitor.visit_fetch(rel)
     if rel.HasField("input"):
         visit_and_update(rel.input, visitor)
@@ -343,10 +346,44 @@ class NamedTableUpdateVisitor(RelVisitor):
         def visit_sort(self, rel):
             pass
 
-class SchemaUpdateVisitor(IcebergSubstraitRelVisitor):
-    
-    def __init__(self, base_schema) -> None:
-        self._base_schema = base_schema
-    
-    def visit_read(self, rel: ReadRel):
-        pass
+
+class SchemaUpdateVisitor(RelVisitor):
+        def __init__(self):
+            self._base_schema = None
+            
+        @property
+        def base_schema(self):
+            return self._base_schema
+
+        def visit_aggregate(self, rel):
+            pass
+
+        def visit_cross(self, rel):
+            pass
+
+        def visit_fetch(self, rel):
+            pass
+
+        def visit_filter(self, rel):
+            pass
+
+        def visit_join(self, rel):
+            pass
+
+        def visit_hashjoin(self, rel):
+            pass
+
+        def visit_merge(self, rel):
+            pass
+
+        def visit_project(self, rel):
+            pass
+
+        def visit_read(self, read_rel):
+            self._base_schema = read_rel.base_schema
+
+        def visit_set(self, rel):
+            pass
+
+        def visit_sort(self, rel):
+            pass

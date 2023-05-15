@@ -14,6 +14,13 @@ import pyarrow.parquet as pq
 
 from icetrait.utils.files import get_filename_and_extension
 
+import duckdb
+import pyarrow as pa
+
+from icetrait.substrait.visitor import SubstraitPlanEditor
+
+
+
 ONE_MEGABYTE = 1024 * 1024
 
 class ProcessSubstrait:
@@ -286,3 +293,20 @@ class IcebergFileDownloader:
 #                 fragment = arrow_format.make_fragment(fin)
 #                 physical_schema = fragment.physical_schema
 #                 print(physical_schema)
+
+def arrow_table_to_substrait(pyarrow_table: pa.Table):
+    ## initialize duckdb
+    con = duckdb.connect()
+    con.install_extension("substrait")
+    con.load_extension("substrait")
+    # Note that the function argument pyarrow_table is used in the query
+    # if the parameter name changed, please change the arrow_table_name
+    arrow_table_name = "pyarrow_table"
+    temp_table_name = "tmp_table"
+    con.execute(f"DROP TABLE IF EXISTS {temp_table_name}")
+    con.execute(f"CREATE TABLE {temp_table_name} AS SELECT * FROM {arrow_table_name}").arrow()
+    con.execute(f"INSERT INTO {temp_table_name} SELECT * FROM {arrow_table_name}").arrow()
+    select_query = f"SELECT * FROM {temp_table_name};"
+    proto_bytes = con.get_substrait(select_query).fetchone()[0]
+    editor = SubstraitPlanEditor(proto_bytes)
+    return editor
