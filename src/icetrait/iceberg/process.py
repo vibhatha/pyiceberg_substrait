@@ -296,9 +296,14 @@ class IcebergFileDownloader:
                     empty_table = pa.Table.from_pylist([], physical_schema)
                     struct = projected_schema.as_struct()
                     projected_empty_table_col_names = []
-                    for field in struct.fields:
+                    for index, field in enumerate(struct.fields):
                         field_id = field.field_id
-                        projected_empty_table_col_names.append(file_project_schema.find_field(field_id).name)
+                        try:
+                            name = file_project_schema.find_field(field_id).name
+                        except ValueError:
+                            #TODO: issue when schema updated with new column but data has not been updated
+                            empty_table.add_column(index, name, [])
+                        projected_empty_table_col_names.append(name)
                     
                     project_empty_table = empty_table.select(projected_empty_table_col_names)
                     
