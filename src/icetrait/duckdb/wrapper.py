@@ -80,6 +80,34 @@ class DuckdbSubstrait:
         The names here and the names in the file are different. 
         1. First compare original plan root_rel.names vs projected_schema and file_schema
         
+            FROM THE ORIGINAL SQL Statement, we should be able to extract the required columns
+            
+            ```python
+                import sqlparse
+
+                sql_statement = "SELECT A, B, C FROM TABLE;"
+                parsed = sqlparse.parse(sql_statement)
+
+                # Assuming the first statement is the one we want
+                statement = parsed[0]
+
+                # Extract column names
+                col_names = None
+
+                for token in statement.tokens:
+                    if isinstance(token, sqlparse.sql.IdentifierList):
+                        str_token = str(token)
+                        col_names = str_token.split(",")
+                        
+                trimmed_cols = []
+                for col_name in col_names:
+                    trimmed_cols.append(col_name.strip())
+            ```
+            use the `trimmed_cols` in `IcebergFileDownloader.download(selected_fields=trimmed_cols)
+            within the function in the sc = self.table.scan(selected_fields=selected_fields)
+            
+            This would only load the required information.
+            
         """
         pass
 
