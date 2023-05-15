@@ -141,7 +141,7 @@ class RelUpdateVisitor(RelVisitor):
         from substrait.gen.proto.algebra_pb2 import Expression
         if project_rel.expressions:
             expressions = project_rel.expressions
-            len_out_schm = len(self.output_schema)
+            len_out_schm = len(self._output_names)
             len_exprs = len(expressions)
             if len_exprs < len_out_schm:
                 start_index = len_exprs
