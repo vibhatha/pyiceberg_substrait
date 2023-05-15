@@ -139,5 +139,23 @@ class TestDuckdbSubstrait:
         res_ar_tb = res.fetch_arrow_table()
         print(res_ar_tb.to_pandas())
         
+    def test_substrait_from_arrow(self):
+        # connect to an in-memory database
+        my_arrow = pa.Table.from_pydict({'a':[42]})
+
+        # create the table "my_table" from the DataFrame "my_arrow"
+        self.con.execute("CREATE TABLE my_table AS SELECT * FROM my_arrow").arrow()
+        
+        # insert into the table "my_table" from the DataFrame "my_arrow"
+        self.con.execute("INSERT INTO my_table SELECT * FROM my_arrow").arrow()
+        
+        select_query = "SELECT * FROM my_table LIMIT 1;"
+        proto_bytes = self.con.get_substrait(select_query).fetchone()[0]
+        editor = SubstraitPlanEditor(proto_bytes)
+        print(editor.plan)
+        
+        
+        
+        
         
         

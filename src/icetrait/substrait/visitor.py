@@ -277,7 +277,7 @@ def _(rel: Rel, visitor: RelUpdateVisitor) -> RelType:
     elif rel.HasField("sort"):
         visit_and_update(rel.sort, visitor)
     else:
-        raise Exception("Invalid relation!")
+        raise Exception(f"Invalid relation! {rel}")
 
 
 @visit_and_update.register(ReadRel)

@@ -247,3 +247,42 @@ class IcebergFileDownloader:
                 download_paths.append(save_file_path)
                 extensions.append(file_ext.split(".")[1])
         return download_paths, extensions
+    
+    
+# class SchemaEvolutionUtil:
+    
+#     def __init__(self, catalog_name, table_name, database_schema) -> None:
+#         self._catalog_name = catalog_name
+#         self._table_name = table_name
+#         self._database_schema = database_schema
+#         self._iceberg_catalog = None
+#         self._iceberg_table = None
+        
+#     def load_catalog(self):
+#         self._iceberg_catalog = load_catalog(self._catalog_name)
+#         return self._iceberg_catalog
+        
+#     def load_table(self):
+#         self._iceberg_table = self._catalog.load_table(self._table_name)
+#         return self._iceberg_table
+        
+#     def load_physical_file(self):
+#         sc = self.table.scan()
+#         table = sc.table
+#         tasks = sc.plan_files()
+#         scheme, _ = PyArrowFileIO.parse_location(table.location())
+        
+        
+#         if isinstance(table.io, PyArrowFileIO):
+#             fs = table.io.get_fs(scheme)
+        
+#         if fs is None:
+#             raise ValueError(f"Couldn't load file system for the provide catalog {self._catalog_name}, table {self._table_name}")
+        
+#         for task in tasks:    
+#             _, parquet_file_path = PyArrowFileIO.parse_location(task.file.file_path)
+#             arrow_format = ds.ParquetFileFormat(pre_buffer=True, buffer_size=(ONE_MEGABYTE * 8))
+#             with fs.open_input_file(parquet_file_path) as fin:
+#                 fragment = arrow_format.make_fragment(fin)
+#                 physical_schema = fragment.physical_schema
+#                 print(physical_schema)
