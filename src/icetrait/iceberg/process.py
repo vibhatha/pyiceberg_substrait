@@ -8,6 +8,8 @@ from pyiceberg.catalog import Catalog
 from pyiceberg.table import Table as IcebergTable
 
 from pyiceberg.io.pyarrow import PyArrowFileIO
+from pyiceberg.schema import Schema, prune_columns
+from pyiceberg.types import MapType, ListType
 
 import pyarrow.dataset as ds
 import pyarrow.parquet as pq
@@ -17,11 +19,12 @@ from icetrait.utils.files import get_filename_and_extension
 import duckdb
 import pyarrow as pa
 
-from icetrait.substrait.visitor import SubstraitPlanEditor
+from icetrait.substrait.visitor import SubstraitPlanEditor, SchemaUpdateVisitor, visit_and_update
 
 
 
 ONE_MEGABYTE = 1024 * 1024
+ICEBERG_SCHEMA = b"iceberg.schema"
 
 class ProcessSubstrait:
     
@@ -231,10 +234,20 @@ class IcebergFileDownloader:
         tasks = sc.plan_files()
         scheme, _ = PyArrowFileIO.parse_location(table.location())
 
+        projected_schema = sc.projection()
+        
         if isinstance(table.io, PyArrowFileIO):
             fs = table.io.get_fs(scheme)
         download_paths = []
         extensions = []
+        # TODO: see if we can extract the file_schema, output_schema, output_field_names
+        # physical_schema from this method itself, then we can use those values in RelUpdateVisitor
+        # and update the file paths and base_schema from a single call.
+        
+        root_rel_names = []
+        file_schema = None
+        physical_schema = None
+        base_schema = None
         for task in tasks:    
             _, parquet_file_path = PyArrowFileIO.parse_location(task.file.file_path)
             arrow_format = ds.ParquetFileFormat(pre_buffer=True, buffer_size=(ONE_MEGABYTE * 8))
@@ -253,46 +266,49 @@ class IcebergFileDownloader:
                 pq.write_table(arrow_table, save_file_path)
                 download_paths.append(save_file_path)
                 extensions.append(file_ext.split(".")[1])
-        return download_paths, extensions
-    
-    
-# class SchemaEvolutionUtil:
-    
-#     def __init__(self, catalog_name, table_name, database_schema) -> None:
-#         self._catalog_name = catalog_name
-#         self._table_name = table_name
-#         self._database_schema = database_schema
-#         self._iceberg_catalog = None
-#         self._iceberg_table = None
-        
-#     def load_catalog(self):
-#         self._iceberg_catalog = load_catalog(self._catalog_name)
-#         return self._iceberg_catalog
-        
-#     def load_table(self):
-#         self._iceberg_table = self._catalog.load_table(self._table_name)
-#         return self._iceberg_table
-        
-#     def load_physical_file(self):
-#         sc = self.table.scan()
-#         table = sc.table
-#         tasks = sc.plan_files()
-#         scheme, _ = PyArrowFileIO.parse_location(table.location())
-        
-        
-#         if isinstance(table.io, PyArrowFileIO):
-#             fs = table.io.get_fs(scheme)
-        
-#         if fs is None:
-#             raise ValueError(f"Couldn't load file system for the provide catalog {self._catalog_name}, table {self._table_name}")
-        
-#         for task in tasks:    
-#             _, parquet_file_path = PyArrowFileIO.parse_location(task.file.file_path)
-#             arrow_format = ds.ParquetFileFormat(pre_buffer=True, buffer_size=(ONE_MEGABYTE * 8))
-#             with fs.open_input_file(parquet_file_path) as fin:
-#                 fragment = arrow_format.make_fragment(fin)
-#                 physical_schema = fragment.physical_schema
-#                 print(physical_schema)
+                
+                schema_raw = None
+                if metadata := physical_schema.metadata:
+                    schema_raw = metadata.get(ICEBERG_SCHEMA)
+                if schema_raw is None:
+                    raise ValueError(
+                        "Iceberg schema is not embedded into the Parquet file, see https://github.com/apache/iceberg/issues/6505"
+                    )
+                file_schema = Schema.parse_raw(schema_raw)
+                # note that the find_type(id) would retrieve the field based on the unique id
+                # schema evolution is guaranteed by the unique id definition for each column 
+                # irrespective of the RUD operation (READ, UPDATE, DELETE)
+                projected_field_ids = {id for id in projected_schema.field_ids \
+                                       if not isinstance(projected_schema.find_type(id), (MapType, ListType))}
+                file_project_schema = prune_columns(file_schema, projected_field_ids, select_full_types=False)
+                
+                # we use physical_schema as the executable Substrait plan's base_schema
+                # we use columns=[col.name for col in file_project_schema.columns] as file column names of the
+                # loading data stage
+                
+                # for each file the names should be the same so just extract values for the first file
+                if len(root_rel_names) == 0:
+                    for field in projected_schema.fields:
+                        root_rel_names.append(field.name)
+                        
+                # get base_schema
+                if base_schema is None:
+                    empty_table = pa.Table.from_pylist([], physical_schema)
+                    struct = projected_schema.as_struct()
+                    projected_empty_table_col_names = []
+                    for field in struct.fields:
+                        field_id = field.field_id
+                        projected_empty_table_col_names.append(file_project_schema.find_field(field_id).name)
+                    
+                    project_empty_table = empty_table.select(projected_empty_table_col_names)
+                    
+                    editor = arrow_table_to_substrait(project_empty_table)
+                    schema_visitor = SchemaUpdateVisitor()
+                    visit_and_update(editor.rel, schema_visitor)
+                    base_schema = schema_visitor.base_schema
+                
+        return download_paths, extensions, base_schema, root_rel_names
+
 
 def arrow_table_to_substrait(pyarrow_table: pa.Table):
     ## initialize duckdb

@@ -75,10 +75,18 @@ class DuckdbSubstrait:
         # with s3 urls to local files 
         # Issue: https://github.com/duckdb/duckdb/discussions/7252
         downloader = IcebergFileDownloader(catalog=self._catalog_name, table=self.table_name_with_schema, local_path=self._local_path)
-        self._files, self._formats = downloader.download()
-        update_visitor = RelUpdateVisitor(files=self._files, formats=self._formats)
+        self._files, self._formats, base_schema, output_names = downloader.download()
+        update_visitor = RelUpdateVisitor(files=self._files, formats=self._formats, base_schema=base_schema)
         editor = SubstraitPlanEditor(self._updated_plan.SerializeToString())
         visit_and_update(editor.rel, update_visitor)
+        # update output names
+        if editor.plan.relations:
+            relations = editor.plan.relations
+            if relations:
+                if relations[0].HasField("root"):
+                    rel_root = relations[0].root
+                    for id, name in enumerate(output_names):
+                        rel_root.names[id] = name
         self._updated_plan = editor.plan
 
     @property

@@ -108,10 +108,12 @@ class IcebergSubstraitRelVisitor(RelVisitor):
         pass
 
 class RelUpdateVisitor(RelVisitor):
+    ## TODO: rename this to ReadRelUpdateVisitor
     
-    def __init__(self, files: List[str], formats: List[str]):
+    def __init__(self, files: List[str], formats: List[str], base_schema=None):
         self._files = files
         self._formats = formats
+        self._base_schema = base_schema
     
     def visit_aggregate(self, rel: AggregateRel):
         pass
@@ -158,6 +160,9 @@ class RelUpdateVisitor(RelVisitor):
                 raise ValueError(f"Unsupported file format {file_format}")
             local_files.items.append(file_or_files)
         read_rel.local_files.CopyFrom(local_files)
+        
+        if self._base_schema:
+            read_rel.base_schema.CopyFrom(self._base_schema)
 
     def visit_set(self, rel: SetRel):
         pass

@@ -97,7 +97,8 @@ class TestDuckdbSubstrait:
         query_result = self.con.from_substrait(proto=proto_bytes)
         result_table = query_result.to_arrow_table()
         assert result_table == self.table
-        
+       
+    @pytest.mark.skip(reason="This test case only passes if Iceberg is configured with REST catalog and MinIO blobstore.") 
     def test_duckdb_wrapper(self):
         """
         NOTE: This test case only passes if Iceberg is configured with REST catalog
@@ -193,7 +194,22 @@ class TestDuckdbSubstrait:
         assert types[1].varchar.nullability == 1
             
         
+    def test_rel_names_update(self):
+        from icetrait.substrait.visitor import SchemaUpdateVisitor
         
+        my_arrow = pa.Table.from_pydict({'a':[42, 20, 21], 'b': ["a", "b", "c"]})
+        editor = arrow_table_to_substrait(my_arrow)
+        visitor = SchemaUpdateVisitor()
+        visit_and_update(editor.rel, visitor)
+        new_names = ['A', 'B']
         
-        
+        if editor.plan.relations:
+            relations = editor.plan.relations
+            if relations:
+                if relations[0].HasField("root"):
+                    rel_root = relations[0].root
+                    for id, name in enumerate(new_names):
+                        rel_root.names[id] = name
+
+        assert editor.plan.relations[0].root.names == new_names
         
