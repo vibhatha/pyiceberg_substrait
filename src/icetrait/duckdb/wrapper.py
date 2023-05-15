@@ -85,8 +85,7 @@ class DuckdbSubstrait:
             if relations:
                 if relations[0].HasField("root"):
                     rel_root = relations[0].root
-                    for id, name in enumerate(output_names):
-                        rel_root.names[id] = name
+                    rel_root.names[:] = output_names
         self._updated_plan = editor.plan
 
     @property

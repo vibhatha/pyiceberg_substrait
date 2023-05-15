@@ -213,3 +213,21 @@ class TestDuckdbSubstrait:
 
         assert editor.plan.relations[0].root.names == new_names
         
+    
+    def test_rel_names_update_diff_length(self):
+        from icetrait.substrait.visitor import SchemaUpdateVisitor
+        
+        my_arrow = pa.Table.from_pydict({'a':[42, 20, 21], 'b': ["a", "b", "c"]})
+        editor = arrow_table_to_substrait(my_arrow)
+        visitor = SchemaUpdateVisitor()
+        visit_and_update(editor.rel, visitor)
+        new_names = ['A', 'B']
+        
+        if editor.plan.relations:
+            relations = editor.plan.relations
+            if relations:
+                if relations[0].HasField("root"):
+                    rel_root = relations[0].root
+                    rel_root.names[:] = new_names
+                    
+        assert editor.plan.relations[0].root.names == new_names
