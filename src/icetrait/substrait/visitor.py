@@ -277,7 +277,7 @@ def _(rel: Rel, visitor: RelUpdateVisitor) -> RelType:
     elif rel.HasField("sort"):
         visit_and_update(rel.sort, visitor)
     else:
-        raise Exception(f"Invalid relation! {rel}")
+        raise Exception(f"Invalid relation! {type(rel)}")
 
 
 @visit_and_update.register(ReadRel)
@@ -290,6 +290,14 @@ def _(rel: ProjectRel, visitor: RelUpdateVisitor) -> RelType:
     visitor.visit_project(rel)
     if rel.HasField("input"):
         visit_and_update(rel.input, visitor)
+
+
+@visit_and_update.register(FetchRel)
+def _(rel: FetchRel, visitor: RelUpdateVisitor):
+    visitor.visit_fetch(rel)
+    if rel.HasField("input"):
+        visit_and_update(rel.input, visitor)
+
 
 
 ## Helper Visitor to update the schema information in a DuckDB generated
