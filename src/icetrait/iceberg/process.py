@@ -310,6 +310,8 @@ class IcebergFileDownloader:
                         field_id = field.field_id
                         name = self._find_field(file_project_schema, field_id)
                         if name is None:
+                            # TODO: it would be better to add an empty pa.array with
+                            # the accurate data type
                             empty_table = empty_table.add_column(index, field.name, [[]])
                             name = field.name
                             print("Name is none: ", name)
@@ -320,6 +322,8 @@ class IcebergFileDownloader:
                     print(empty_table)
                     
                     project_empty_table = empty_table.select(projected_empty_table_col_names)
+                    print("project_empty_table")
+                    print(project_empty_table)
                     
                     editor = arrow_table_to_substrait(project_empty_table)
                     schema_visitor = SchemaUpdateVisitor()
