@@ -48,7 +48,7 @@ class DuckdbSubstrait:
         ## pyiceberg_parameters
         
         # used in DataScan(selected_fields=*)
-        self._selected_fields = self._get_columns_in_sql_statement() if len(self._get_columns_in_sql_statement()) > 0 else ["*"]
+        self._selected_fields = self._get_columns_in_sql_statement()
 
     @property
     def plan(self):
@@ -80,7 +80,7 @@ class DuckdbSubstrait:
         parsed = sqlparse.parse(self._sql_query)
         statement = parsed[0]
         # extracting column names
-        col_names = None
+        col_names = ["*"]
 
         for token in statement.tokens:
             if isinstance(token, sqlparse.sql.IdentifierList):
