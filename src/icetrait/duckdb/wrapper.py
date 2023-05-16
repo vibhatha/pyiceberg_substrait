@@ -158,6 +158,10 @@ class DuckdbSubstrait:
             output_names = root_rel_names
         else: 
             output_names = self._selected_fields
+        print("self._selected_fields")
+        print(self._selected_fields)
+        print("output_names")
+        print(output_names)
         update_visitor = RelUpdateVisitor(files=self._files, formats=self._formats, base_schema=base_schema, output_names=output_names)
         editor = SubstraitPlanEditor(self._updated_plan.SerializeToString())
         visit_and_update(editor.rel, update_visitor)
