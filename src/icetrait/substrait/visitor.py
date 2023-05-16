@@ -138,21 +138,22 @@ class RelUpdateVisitor(RelVisitor):
         pass
     
     def visit_project(self, project_rel: ProjectRel):
-        from substrait.gen.proto.algebra_pb2 import Expression
-        if project_rel.expressions and self._output_names:
-            expressions = project_rel.expressions
-            len_out_schm = len(self._output_names)
-            len_exprs = len(expressions)
-            if len_exprs < len_out_schm:
-                start_index = len_exprs
-                for _ in range(len_out_schm - len_exprs):
-                    expression = Expression()
-                    field_reference = expression.FieldReference()
-                    root_reference = Expression.FieldReference.RootReference()
-                    field_reference.direct_reference.struct_field.field = start_index
-                    field_reference.root_reference.CopyFrom(root_reference)
-                    expression.selection.CopyFrom(field_reference)
-                    project_rel.expressions.append(expression)
+        # from substrait.gen.proto.algebra_pb2 import Expression
+        # if project_rel.expressions and self._output_names:
+        #     expressions = project_rel.expressions
+        #     len_out_schm = len(self._output_names)
+        #     len_exprs = len(expressions)
+        #     if len_exprs < len_out_schm:
+        #         start_index = len_exprs
+        #         for _ in range(len_out_schm - len_exprs):
+        #             expression = Expression()
+        #             field_reference = expression.FieldReference()
+        #             root_reference = Expression.FieldReference.RootReference()
+        #             field_reference.direct_reference.struct_field.field = start_index
+        #             field_reference.root_reference.CopyFrom(root_reference)
+        #             expression.selection.CopyFrom(field_reference)
+        #             project_rel.expressions.append(expression)
+        pass
     
     def visit_read(self, read_rel: ReadRel):
         # TODO: optimize this via a Visitor
@@ -181,22 +182,23 @@ class RelUpdateVisitor(RelVisitor):
             read_rel.base_schema.CopyFrom(self._base_schema)
         
         # TODO: optimize this logic using a visitor
-        if self._output_names:
-            if read_rel.HasField("projection"):
-                if read_rel.projection.HasField("select"):
-                    if read_rel.projection.select.struct_items:
-                        from substrait.gen.proto.algebra_pb2 import Expression
-                        projection = read_rel.projection
-                        struct_items = projection.select.struct_items
-                        len_out_schm = len(self._output_names)
-                        len_struct_items = len(struct_items)
-                        if len_struct_items < len_out_schm:
-                            starting_index = len_struct_items
-                            for i in range(len_out_schm - len_struct_items):
-                                struct_item = Expression.MaskExpression.StructItem()
-                                struct_item.field = starting_index
-                                starting_index = starting_index + 1
-                                projection.select.struct_items.append(struct_item)
+        # if self._output_names:
+        #     if read_rel.HasField("projection"):
+        #         if read_rel.projection.HasField("select"):
+        #             if read_rel.projection.select.struct_items:
+        #                 from substrait.gen.proto.algebra_pb2 import Expression
+        #                 projection = read_rel.projection
+        #                 struct_items = projection.select.struct_items
+        #                 len_out_schm = len(self._output_names)
+        #                 len_struct_items = len(struct_items)
+        #                 print(self._output_names)
+        #                 if len_struct_items < len_out_schm:
+        #                     starting_index = len_struct_items
+        #                     for i in range(len_out_schm - len_struct_items):
+        #                         struct_item = Expression.MaskExpression.StructItem()
+        #                         struct_item.field = starting_index
+        #                         starting_index = starting_index + 1
+        #                         projection.select.struct_items.append(struct_item)
         
 
     def visit_set(self, rel: SetRel):
