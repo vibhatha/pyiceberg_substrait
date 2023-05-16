@@ -165,6 +165,8 @@ class DuckdbSubstrait:
         update_visitor = RelUpdateVisitor(files=self._files, formats=self._formats, base_schema=base_schema, output_names=output_names)
         editor = SubstraitPlanEditor(self._updated_plan.SerializeToString())
         visit_and_update(editor.rel, update_visitor)
+        # TODO: if selected_fields = [*], we need to make sure we update the names accordingly
+        # assert len(root_rel_names) == len(existing_root_rel_names)
         # update output names
         # if editor.plan.relations:
         #     relations = editor.plan.relations
