@@ -108,7 +108,9 @@ class TestDuckdbSubstrait:
         self.con.execute(query='CREATE TABLE SampleTable (id int,name text);')
         sql_query = "SELECT * FROM SampleTable;"
         proto_bytes = self.con.get_substrait(sql_query).fetchone()[0]
-        duckdb_substrait = DuckdbSubstrait(proto_bytes, "default", "/home/iceberg/notebooks/s3", "", sql_query)
+        def setup_func():
+            return duckdb.connect()
+        duckdb_substrait = DuckdbSubstrait(proto_bytes, "default", "/home/iceberg/notebooks/s3", "", sql_query, setup_func)
         duckdb_substrait.execute()
 
     def test_duckdb_schema(self):

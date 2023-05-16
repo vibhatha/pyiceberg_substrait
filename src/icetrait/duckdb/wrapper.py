@@ -22,9 +22,11 @@ from icetrait.substrait.visitor import (ExtractTableVisitor,
 
 class DuckdbSubstrait:
     
-    def __init__(self, catalog_name:str, local_path:str, duckdb_schema:str, sql_query:str):
+    def __init__(self, catalog_name:str, local_path:str, duckdb_schema:str, sql_query:str, setup_func):
         ## initialize duckdb
-        self._con = duckdb.connect()
+        self._con = setup_func()
+        if not isinstance(self._con, duckdb.DuckDBPyConnection):
+            raise ValueError(f"setup_func must return a duckdb.DuckDBPyConnection instance, instead it returned {type(self._con)}")
         self._con.install_extension("substrait")
         self._con.load_extension("substrait")
         self._con.install_extension("httpfs")
@@ -164,7 +166,9 @@ class DuckdbSubstrait:
 
 
 def run_query(plan: SubstraitPlan, catalog_name:str, local_path:str, duckdb_schema:str):
-    wrapper = DuckdbSubstrait(plan=plan, catalog_name=catalog_name, local_path=local_path, duckdb_schema=duckdb_schema)
+    def setup_func():
+        return duckdb.connect()
+    wrapper = DuckdbSubstrait(plan=plan, catalog_name=catalog_name, local_path=local_path, duckdb_schema=duckdb_schema, setup_func=setup_func)
     wrapper.update_named_table_with_schema()
     wrapper.update_with_local_file_paths()
     return wrapper.execute()
