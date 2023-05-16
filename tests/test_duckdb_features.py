@@ -106,8 +106,9 @@ class TestDuckdbSubstrait:
         and MinIO blobstore. 
         """
         self.con.execute(query='CREATE TABLE SampleTable (id int,name text);')
-        proto_bytes = self.con.get_substrait("SELECT * FROM SampleTable;").fetchone()[0]
-        duckdb_substrait = DuckdbSubstrait(proto_bytes, "default", "/home/iceberg/notebooks/s3", "")
+        sql_query = "SELECT * FROM SampleTable;"
+        proto_bytes = self.con.get_substrait(sql_query).fetchone()[0]
+        duckdb_substrait = DuckdbSubstrait(proto_bytes, "default", "/home/iceberg/notebooks/s3", "", sql_query)
         duckdb_substrait.execute()
 
     def test_duckdb_schema(self):

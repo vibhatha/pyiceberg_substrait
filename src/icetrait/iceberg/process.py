@@ -236,8 +236,8 @@ class IcebergFileDownloader:
             return name
         return name
     
-    def download(self):
-        sc = self.table.scan()
+    def download(self, selected_fields:List[str]):
+        sc = self.table.scan(selected_fields=selected_fields)
         table = sc.table
         tasks = sc.plan_files()
         scheme, _ = PyArrowFileIO.parse_location(table.location())

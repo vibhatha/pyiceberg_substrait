@@ -7,6 +7,8 @@ from pyiceberg.table import Table as IcebergTable
 import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 
+import sqlparse
+
 from substrait.gen.proto.plan_pb2 import Plan as SubstraitPlan
 
 from icetrait.iceberg.process import IcebergFileDownloader
@@ -20,33 +22,35 @@ from icetrait.substrait.visitor import (ExtractTableVisitor,
 
 class DuckdbSubstrait:
     
-    def __init__(self, plan: SubstraitPlan, catalog_name:str, local_path:str, duckdb_schema:str):
-        self._plan = plan
-        self._substrait_plan = SubstraitPlan()
+    def __init__(self, catalog_name:str, local_path:str, duckdb_schema:str, sql_query:str):
+        ## initialize duckdb
+        self._con = duckdb.connect()
+        self._con.install_extension("substrait")
+        self._con.load_extension("substrait")
+        self._con.install_extension("httpfs")
+        self._con.load_extension("httpfs")
+        ## initialize parameters
+        self._sql_query = sql_query
+        plan_proto_bytes = self._con.get_substrait(sql_query).fetchone()[0]
+        self._plan = plan_proto_bytes # saves original plan
+        self._substrait_plan = SubstraitPlan() # get used to make changes
         self._substrait_plan.ParseFromString(self._plan)
         self._catalog_name = catalog_name
         self._duckdb_schema = duckdb_schema
         self._table_name = None
         self._files = None
         self._formats = None
-        self._updated_plan = None
+        self._updated_plan = None # get used to get the final output
         self._local_path = local_path
-        self._con = None
-        self._initialize()
         
+        ## pyiceberg_parameters
+        
+        # used in DataScan(selected_fields=*)
+        self._selected_fields = self._get_columns_in_sql_statement() if len(self._get_columns_in_sql_statement()) > 0 else ["*"]
+
     @property
     def plan(self):
         return self._substrait_plan
-    
-    def _initialize(self):
-        self._con = duckdb.connect()
-        self._con.install_extension("substrait")
-        self._con.load_extension("substrait")
-
-        self._con.install_extension("httpfs")
-        self._con.load_extension("httpfs")
-        
-        return self._con
     
     @property
     def table_name(self):
@@ -69,6 +73,22 @@ class DuckdbSubstrait:
         named_table_update_visitor = NamedTableUpdateVisitor(self.table_name_with_schema)
         visit_and_update(editor.rel, named_table_update_visitor)
         self._updated_plan = editor.plan
+        
+    def _get_columns_in_sql_statement(self):
+        parsed = sqlparse.parse(self._sql_query)
+        statement = parsed[0]
+        # extracting column names
+        col_names = None
+
+        for token in statement.tokens:
+            if isinstance(token, sqlparse.sql.IdentifierList):
+                str_token = str(token)
+                col_names = str_token.split(",")
+                
+        trimmed_cols = []
+        for col_name in col_names:
+            trimmed_cols.append(col_name.strip())
+        return trimmed_cols
         
     def extract_info_from_input_plan(self):
         """_summary_
@@ -108,6 +128,9 @@ class DuckdbSubstrait:
             
             This would only load the required information.
             
+            If there are filters, we should be able to use the same logic and push them down as 
+            Substrait filter expressions. Need to think about this too. 
+            
         """
         pass
 
@@ -116,7 +139,7 @@ class DuckdbSubstrait:
         # with s3 urls to local files 
         # Issue: https://github.com/duckdb/duckdb/discussions/7252
         downloader = IcebergFileDownloader(catalog=self._catalog_name, table=self.table_name_with_schema, local_path=self._local_path)
-        self._files, self._formats, base_schema, output_names = downloader.download()
+        self._files, self._formats, base_schema, output_names = downloader.download(selected_fields=self._selected_fields)
         update_visitor = RelUpdateVisitor(files=self._files, formats=self._formats, base_schema=base_schema, output_names=output_names)
         editor = SubstraitPlanEditor(self._updated_plan.SerializeToString())
         visit_and_update(editor.rel, update_visitor)
