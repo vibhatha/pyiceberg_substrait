@@ -48,7 +48,7 @@ class DuckdbSubstrait:
         ## pyiceberg_parameters
         
         # used in DataScan(selected_fields=*)
-        self._selected_fields = self._get_columns_in_sql_statement()
+        self._selected_fields, self._selected_fields_aliases = self._get_columns_in_sql_statement()
 
     @property
     def plan(self):
@@ -87,10 +87,21 @@ class DuckdbSubstrait:
                 str_token = str(token)
                 col_names = str_token.split(",")
                 
-        trimmed_cols = []
+        names = []
+        aliases = []
+
         for col_name in col_names:
-            trimmed_cols.append(col_name.strip())
-        return trimmed_cols
+            if "as" in col_name:
+                splits = col_name.split("as")
+                names.append(splits[0].strip())
+                aliases.append(splits[1].strip())
+            elif "AS" in col_name:
+                splits = col_name.split("AS")
+                names.append(splits[0].strip())
+                aliases.append(splits[1].strip())
+            else: 
+                names.append(col_name.strip())
+        return names, aliases
         
     def extract_info_from_input_plan(self):
         """_summary_
@@ -141,7 +152,12 @@ class DuckdbSubstrait:
         # with s3 urls to local files 
         # Issue: https://github.com/duckdb/duckdb/discussions/7252
         downloader = IcebergFileDownloader(catalog=self._catalog_name, table=self.table_name_with_schema, local_path=self._local_path)
-        self._files, self._formats, base_schema, output_names = downloader.download(selected_fields=self._selected_fields)
+        self._files, self._formats, base_schema, root_rel_names = downloader.download(selected_fields=self._selected_fields)
+        output_names = []
+        if self._selected_fields == ["*"]:
+            output_names = root_rel_names
+        else: 
+            output_names = self._selected_fields
         update_visitor = RelUpdateVisitor(files=self._files, formats=self._formats, base_schema=base_schema, output_names=output_names)
         editor = SubstraitPlanEditor(self._updated_plan.SerializeToString())
         visit_and_update(editor.rel, update_visitor)
