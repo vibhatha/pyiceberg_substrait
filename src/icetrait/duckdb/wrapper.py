@@ -166,12 +166,12 @@ class DuckdbSubstrait:
         editor = SubstraitPlanEditor(self._updated_plan.SerializeToString())
         visit_and_update(editor.rel, update_visitor)
         # update output names
-        if editor.plan.relations:
-            relations = editor.plan.relations
-            if relations:
-                if relations[0].HasField("root"):
-                    rel_root = relations[0].root
-                    rel_root.names[:] = output_names
+        # if editor.plan.relations:
+        #     relations = editor.plan.relations
+        #     if relations:
+        #         if relations[0].HasField("root"):
+        #             rel_root = relations[0].root
+        #             rel_root.names[:] = output_names
         self._updated_plan = editor.plan
 
     @property
