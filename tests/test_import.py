@@ -164,6 +164,8 @@ def test_update_readrel_projection():
             pass
         
         def visit_read(self, read_rel: ReadRel):
+            base_schema = read_rel.base_schema
+            print(base_schema.names)
             if self._project_ids:
                 if read_rel.HasField("projection"):
                     if read_rel.projection.HasField("select"):
@@ -171,11 +173,10 @@ def test_update_readrel_projection():
                             from substrait.gen.proto.algebra_pb2 import Expression
                             projection = read_rel.projection
                             new_struct_items = projection.select.struct_items
-                            print(type(new_struct_items))
                             new_projection = Expression.MaskExpression()
                             for project_id in self._project_ids:
                                 struct_item = Expression.MaskExpression.StructItem()
-                                struct_item.field = project_id - 1
+                                struct_item.field = project_id
                                 new_projection.select.struct_items.append(struct_item)
                             projection.CopyFrom(new_projection)
         
@@ -195,4 +196,4 @@ def test_update_readrel_projection():
     validate_visitor = RelValidateVisitor(files=files, formats=file_formats, project_ids=[5, 6, 7])
     visit_and_update(editor.rel, validate_visitor)
     
-    print(editor.plan)
+    #print(editor.plan)

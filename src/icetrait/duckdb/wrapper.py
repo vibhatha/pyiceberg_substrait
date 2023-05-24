@@ -212,11 +212,17 @@ class DuckdbSubstrait:
         print("output_names")
         print(output_names)
         projection_fields = []
-        fields = current_schema.fields
-        for relative_id, field in enumerate(fields):
-            if field.name in output_names:
-                print("Field Found : ", relative_id, field.name)
-                projection_fields.append(relative_id)
+        # fields = current_schema.fields
+        # for relative_id, field in enumerate(fields):
+        #     if field.name in base_schema.names:
+        #         print("Field Found : ", relative_id, field.name)
+        #         #  TODO: you have to put the relative index according to the base_schema (full schema?)
+        #         projection_fields.append(relative_id)
+        base_schema_names = base_schema.names       
+        for item in output_names:
+            if item in base_schema_names:
+                index = base_schema_names.index(item)
+                projection_fields.append(index)
 
         update_visitor = RelUpdateVisitor(files=self._files, formats=self._formats, base_schema=base_schema, output_names=output_names, projection_fields=projection_fields)
         editor = SubstraitPlanEditor(self._updated_plan.SerializeToString())
