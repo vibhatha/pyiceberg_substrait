@@ -23,8 +23,6 @@ from icetrait.substrait.visitor import SubstraitPlanEditor, SchemaUpdateVisitor,
 
 import icetrait as icet
 
-DEBUG = int(icet.DEBUG) == 1
-
 ONE_MEGABYTE = 1024 * 1024
 ICEBERG_SCHEMA = b"iceberg.schema"
 
