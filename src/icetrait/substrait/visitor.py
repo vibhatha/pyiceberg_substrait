@@ -150,7 +150,18 @@ class RelUpdateVisitor(RelVisitor):
                         return True
                 return False
 
-            field_indices = [i for i in range(len(self._output_names))]
+            # if output name (or mapped name) is not current_schema, remove the
+            # corresponding field_indices
+            def get_id(current_schema, val):
+                for field in current_schema.fields:
+                    if field.name == val:
+                        return field.field_id
+                return None
+
+            for output_name in self._output_names:
+                this_id = get_id(self._current_schema, output_name)
+                if this_id is not None:
+                    field_indices.append(this_id - 1)
 
             if field_indices:
                 expressions = []
