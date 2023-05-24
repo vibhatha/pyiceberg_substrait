@@ -138,6 +138,7 @@ def test_update_readrel_projection():
             self._files = files
             self._formats = formats
             self._project_ids = project_ids
+            self.base_schema = None
         
         def visit_aggregate(self, rel: AggregateRel):
             pass
@@ -164,8 +165,7 @@ def test_update_readrel_projection():
             pass
         
         def visit_read(self, read_rel: ReadRel):
-            base_schema = read_rel.base_schema
-            print(base_schema.names)
+            self.base_schema = read_rel.base_schema
             if self._project_ids:
                 if read_rel.HasField("projection"):
                     if read_rel.projection.HasField("select"):
@@ -196,4 +196,13 @@ def test_update_readrel_projection():
     validate_visitor = RelValidateVisitor(files=files, formats=file_formats, project_ids=[5, 6, 7])
     visit_and_update(editor.rel, validate_visitor)
     
-    #print(editor.plan)
+    base_schema = validate_visitor.base_schema
+    names = base_schema.names
+    print(dir(names))
+
+    def find_index(base_schema, value):
+        for idx, name in enumerate(base_schema.names):
+            if name == value:
+                return idx
+
+    print(find_index(base_schema=base_schema, value="E"))

@@ -218,10 +218,14 @@ class DuckdbSubstrait:
         #         print("Field Found : ", relative_id, field.name)
         #         #  TODO: you have to put the relative index according to the base_schema (full schema?)
         #         projection_fields.append(relative_id)
+        def find_index(base_schema, value):
+            for idx, name in enumerate(base_schema.names):
+                if name == value:
+                    return idx
         base_schema_names = base_schema.names       
         for item in output_names:
             if item in base_schema_names:
-                index = base_schema_names.index(item)
+                index = find_index(base_schema=base_schema, value=item)
                 projection_fields.append(index)
 
         update_visitor = RelUpdateVisitor(files=self._files, formats=self._formats, base_schema=base_schema, output_names=output_names, projection_fields=projection_fields)
