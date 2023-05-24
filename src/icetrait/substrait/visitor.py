@@ -211,7 +211,7 @@ class RelUpdateVisitor(RelVisitor):
                             new_projection = Expression.MaskExpression()
                             for project_id in self._projection_fields:
                                 struct_item = Expression.MaskExpression.StructItem()
-                                struct_item.field = project_id - 1
+                                struct_item.field = project_id
                                 new_projection.select.struct_items.append(struct_item)
                             projection.CopyFrom(new_projection)
         

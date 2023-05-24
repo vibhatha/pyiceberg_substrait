@@ -214,8 +214,8 @@ class DuckdbSubstrait:
         projection_fields = []
         fields = current_schema.fields
         for relative_id, field in enumerate(fields):
-            print("Field Found : ", relative_id, field.name)
             if field.name in output_names:
+                print("Field Found : ", relative_id, field.name)
                 projection_fields.append(relative_id)
 
         update_visitor = RelUpdateVisitor(files=self._files, formats=self._formats, base_schema=base_schema, output_names=output_names, projection_fields=projection_fields)
