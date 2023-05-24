@@ -150,11 +150,8 @@ class RelUpdateVisitor(RelVisitor):
                 return None
             for output_name in self._output_names:
                 idx = get_field_index(self._base_schema, output_name)
-                if idx:
-                    field_indices.append(idx)
-                else:
-                    print(f"Error occurred in getting field name {output_name} from {self._base_schema.names}")
-                    pass
+                # TODO: do we need validation for None value?
+                field_indices.append(idx)
 
             if field_indices:
                 expressions = []
