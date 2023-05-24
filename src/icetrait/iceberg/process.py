@@ -302,39 +302,39 @@ class IcebergFileDownloader:
                         root_rel_names.append(field.name)
                         
                 # get base_schema
-                if base_schema is None:
-                    empty_table = pa.Table.from_pylist([], physical_schema)
-                    print("Table before update")
-                    print(empty_table)
-                    struct = projected_schema.as_struct()
-                    projected_empty_table_col_names = []
-                    for index, field in enumerate(struct.fields):
-                        field_id = field.field_id
-                        name = self._find_field(file_project_schema, field_id)
-                        if name is None:
-                            # TODO: it would be better to add an empty pa.array with
-                            # the accurate data type
-                            empty_table = empty_table.add_column(index, field.name, [[]])
-                            name = field.name
-                        projected_empty_table_col_names.append(name)
-                        print("Name is not none: ", name)
+                # if base_schema is None:
+                #     empty_table = pa.Table.from_pylist([], physical_schema)
+                #     print("Table before update")
+                #     print(empty_table)
+                #     struct = projected_schema.as_struct()
+                #     projected_empty_table_col_names = []
+                #     for index, field in enumerate(struct.fields):
+                #         field_id = field.field_id
+                #         name = self._find_field(file_project_schema, field_id)
+                #         if name is None:
+                #             # TODO: it would be better to add an empty pa.array with
+                #             # the accurate data type
+                #             empty_table = empty_table.add_column(index, field.name, [[]])
+                #             name = field.name
+                #         projected_empty_table_col_names.append(name)
+                #         print("Name is not none: ", name)
                     
-                    print("Table after update")
-                    print(empty_table)
+                #     print("Table after update")
+                #     print(empty_table)
                     
-                    project_empty_table = empty_table.select(projected_empty_table_col_names)
-                    print("project_empty_table")
-                    print(project_empty_table)
+                #     project_empty_table = empty_table.select(projected_empty_table_col_names)
+                #     print("project_empty_table")
+                #     print(project_empty_table)
                     
-                    editor = arrow_table_to_substrait(project_empty_table)
-                    schema_visitor = SchemaUpdateVisitor()
-                    visit_and_update(editor.rel, schema_visitor)
-                    base_schema = schema_visitor.base_schema
-                    print("*" * 80)
-                    print("Projected Schema")
-                    print(projected_schema)
-                    print("*" * 80)
-                    print("Projected Ids")
+                #     editor = arrow_table_to_substrait(project_empty_table)
+                #     schema_visitor = SchemaUpdateVisitor()
+                #     visit_and_update(editor.rel, schema_visitor)
+                #     base_schema = schema_visitor.base_schema
+                #     print("*" * 80)
+                #     print("Projected Schema")
+                #     print(projected_schema)
+                #     print("*" * 80)
+                #     print("Projected Ids")
 
         current_table_schema = table.schema()
         return download_paths, extensions, base_schema, root_rel_names, current_table_schema
