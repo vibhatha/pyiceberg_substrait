@@ -158,7 +158,7 @@ class RelUpdateVisitor(RelVisitor):
 
             if field_indices:
                 expressions = []
-                for field_index in self._field_indices:
+                for field_index in field_indices:
                     expression = Expression()
                     field_reference = expression.FieldReference()
                     root_reference = Expression.FieldReference.RootReference()
