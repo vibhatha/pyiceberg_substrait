@@ -48,7 +48,7 @@ class DuckdbSubstrait:
         ## pyiceberg_parameters
         
         # used in DataScan(selected_fields=*)
-        self._selected_fields, self._selected_fields_aliases = self._get_columns_in_sql_statement()
+        self._selected_fields, self._selected_fields_aliases = self.extract_fields()
 
     @property
     def plan(self):
@@ -76,6 +76,55 @@ class DuckdbSubstrait:
         visit_and_update(editor.rel, named_table_update_visitor)
         self._updated_plan = editor.plan
         
+    def extract_alias(self, statement):
+        name = None
+        alias = None
+        if "as" in statement:
+            splits = statement.split("as")
+            name = splits[0].strip()
+            alias = splits[1].strip()
+        elif "AS" in statement:
+            splits = statement.split("AS")
+            name = splits[0].strip()
+            alias = splits[1].strip()
+        else:
+            name = statement
+            alias = ""
+        return name, alias
+
+    def extract_fields(self, query):
+        # Parse the SQL query
+        parsed = sqlparse.parse(query)
+
+        # The parsed result is a list of statements. We assume that there's only one
+        # statement in your query, so we get the first one.
+        stmt = parsed[0]
+
+        # Check if the statement is a SELECT statement
+        if stmt.get_type() != 'SELECT':
+            raise ValueError('Query must be a SELECT statement')
+
+        # Iterate over the tokens in the parsed statement
+        fields = []
+        aliases = []
+        for token in stmt.tokens:
+            # Tokens can be various types. The field names are identified by type sqlparse.sql.Identifier
+            # In case of multiple fields being selected, they are of type sqlparse.sql.IdentifierList
+            if token.value.upper() == 'FROM':
+                return fields, aliases
+            if isinstance(token, sqlparse.sql.Identifier):
+                name, alias = self.extract_alias(str(token))
+                fields.append(name)
+                aliases.append(alias)
+            elif isinstance(token, sqlparse.sql.IdentifierList):
+                for identifier in token.get_identifiers():
+                    name, alias = self.extract_alias(str(identifier))
+                    fields.append(name)
+                    aliases.append(alias)
+            elif token.value == "*":
+                return ["*"], [""]
+
+    @DeprecationWarning
     def _get_columns_in_sql_statement(self):
         parsed = sqlparse.parse(self._sql_query)
         statement = parsed[0]
