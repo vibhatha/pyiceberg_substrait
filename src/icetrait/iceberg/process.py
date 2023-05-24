@@ -299,10 +299,9 @@ class IcebergFileDownloader:
                 # for each file the names should be the same so just extract values for the first file
                 if len(root_rel_names) == 0:
                     # TODO: this logic becomes faulty when the user ask for partial amount of columns
-                    # for field in projected_schema.fields:
-                    #     root_rel_names.append(field.name)
-                    for field in current_table_schema.fields:
+                    for field in projected_schema.fields:
                         root_rel_names.append(field.name)
+                    
                         
                 # get base_schema
                 if base_schema is None:
