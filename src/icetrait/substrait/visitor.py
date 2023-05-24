@@ -144,17 +144,13 @@ class RelUpdateVisitor(RelVisitor):
         if project_rel.expressions and self._output_names:
             expressions = project_rel.expressions
             field_indices = []
-            def get_field_index(base_schema, field_name):
+            def found_field_index(base_schema, field_name):
                 for idx, name in enumerate(base_schema.names):
                     if name == field_name:
-                        return idx
-                return None
-            for output_name in self._output_names:
-                idx = get_field_index(self._base_schema, output_name)
-                # TODO: do we need validation for None value?
-                if idx == None:
-                    idx = self._current_schema.find_field(output_name).field_id - 1 # -1 is to get the index value
-                field_indices.append(idx)
+                        return True
+                return False
+
+            field_indices = [i for i in range(len(self._output_names))]
 
             if field_indices:
                 expressions = []
@@ -196,23 +192,6 @@ class RelUpdateVisitor(RelVisitor):
             read_rel.base_schema.CopyFrom(self._base_schema)
         
         # TODO: optimize this logic using a visitor
-        # if self._output_names:
-        #     if read_rel.HasField("projection"):
-        #         if read_rel.projection.HasField("select"):
-        #             if read_rel.projection.select.struct_items:
-        #                 from substrait.gen.proto.algebra_pb2 import Expression
-        #                 projection = read_rel.projection
-        #                 struct_items = projection.select.struct_items
-        #                 len_out_schm = len(self._output_names)
-        #                 len_struct_items = len(struct_items)
-        #                 print(self._output_names)
-        #                 if len_struct_items < len_out_schm:
-        #                     starting_index = len_struct_items
-        #                     for i in range(len_out_schm - len_struct_items):
-        #                         struct_item = Expression.MaskExpression.StructItem()
-        #                         struct_item.field = starting_index
-        #                         starting_index = starting_index + 1
-        #                         projection.select.struct_items.append(struct_item)
         # if self._projection_fields:
         #         if read_rel.HasField("projection"):
         #             if read_rel.projection.HasField("select"):

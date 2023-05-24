@@ -212,4 +212,4 @@ def test_update_readrel_projection():
     names = base_schema.names
 
 
-    print(editor.plan)
+    print(len(names))
