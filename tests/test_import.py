@@ -134,11 +134,12 @@ def test_update_readrel_projection():
     
     class RelValidateVisitor(RelVisitor):
         
-        def __init__(self, files, formats, project_ids=None):
+        def __init__(self, files, formats, project_ids=None, field_indices=None):
             self._files = files
             self._formats = formats
             self._project_ids = project_ids
             self.base_schema = None
+            self._field_indices = field_indices
         
         def visit_aggregate(self, rel: AggregateRel):
             pass
@@ -161,8 +162,19 @@ def test_update_readrel_projection():
         def visit_merge(self, rel: MergeJoinRel):
             pass
         
-        def visit_project(self, rel: ProjectRel):
-            pass
+        def visit_project(self, project_rel: ProjectRel):
+            from substrait.gen.proto.algebra_pb2 import Expression
+            expressions = []
+            for field_index in self._field_indices:
+                expression = Expression()
+                field_reference = expression.FieldReference()
+                root_reference = Expression.FieldReference.RootReference()
+                field_reference.direct_reference.struct_field.field = field_index
+                field_reference.root_reference.CopyFrom(root_reference)
+                expression.selection.CopyFrom(field_reference)
+                expressions.append(expression)
+            del project_rel.expressions[:]
+            project_rel.expressions.extend(expressions)
         
         def visit_read(self, read_rel: ReadRel):
             self.base_schema = read_rel.base_schema
@@ -193,16 +205,11 @@ def test_update_readrel_projection():
     files = ["s3://data/p1.parquet", "s3://data/p2.orc", "s3://data/p3.dwrf", "s3://data/p4.arrow"]
     file_formats = ["parquet", "orc", "dwrf", "orc"]
     
-    validate_visitor = RelValidateVisitor(files=files, formats=file_formats, project_ids=[5, 6, 7])
+    validate_visitor = RelValidateVisitor(files=files, formats=file_formats, project_ids=[5, 6, 7], field_indices=[0, 1, 2])
     visit_and_update(editor.rel, validate_visitor)
     
     base_schema = validate_visitor.base_schema
     names = base_schema.names
-    print(dir(names))
 
-    def find_index(base_schema, value):
-        for idx, name in enumerate(base_schema.names):
-            if name == value:
-                return idx
 
-    print(find_index(base_schema=base_schema, value="E"))
+    print(editor.plan)

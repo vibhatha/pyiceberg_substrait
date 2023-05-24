@@ -157,14 +157,17 @@ class RelUpdateVisitor(RelVisitor):
                     pass
 
             if field_indices:
-                for field_index in field_indices:
+                expressions = []
+                for field_index in self._field_indices:
                     expression = Expression()
                     field_reference = expression.FieldReference()
                     root_reference = Expression.FieldReference.RootReference()
                     field_reference.direct_reference.struct_field.field = field_index
                     field_reference.root_reference.CopyFrom(root_reference)
                     expression.selection.CopyFrom(field_reference)
-                    project_rel.expressions.append(expression)
+                    expressions.append(expression)
+                del project_rel.expressions[:]
+                project_rel.expressions.extend(expressions)
     
     def visit_read(self, read_rel: ReadRel):
         # TODO: optimize this via a Visitor
