@@ -330,19 +330,25 @@ class IcebergFileDownloader:
                     # project_empty_table = empty_table.select(projected_empty_table_col_names)
                     # print("project_empty_table")
                     # print(project_empty_table)
-                    def create_columns_for_select(selected_fields:List[str]):
+                    def create_columns_for_select(selected_fields:List[str], reference_table:pa.Table):
                         num_fields = len(selected_fields)
                         if len(selected_fields) == 1:
                             return selected_fields[0]
                         statement = ""
                         for idx, field in enumerate(selected_fields):
+                            # if the field is not in the empty table
+                            # we must track the correct name from table_schema
+                            if field not in reference_table.column_names:
+                                ref_field = current_table_schema.find_field(field)
+                                field = reference_table.column_names[ref_field.field_id]
                             if idx != num_fields - 1:
                                 statement = statement + field + ", "
                             else:
                                 statement = statement + field
                         return statement
 
-                    editor = arrow_table_to_substrait_with_select(empty_table, selected_columns=create_columns_for_select(selected_fields=selected_fields))
+                    selected_columns = create_columns_for_select(selected_fields=selected_fields, reference_table=empty_table)
+                    editor = arrow_table_to_substrait_with_select(empty_table, selected_columns=selected_columns)
                     schema_visitor = SchemaUpdateVisitor()
                     visit_and_update(editor.rel, schema_visitor)
                     base_schema = schema_visitor.base_schema
