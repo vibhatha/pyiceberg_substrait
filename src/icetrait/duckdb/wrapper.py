@@ -212,6 +212,7 @@ class DuckdbSubstrait:
         print("output_names")
         print(output_names)
         projection_fields = []
+        print(current_schema)
         # fields = current_schema.fields
         # for relative_id, field in enumerate(fields):
         #     if field.name in base_schema.names:
