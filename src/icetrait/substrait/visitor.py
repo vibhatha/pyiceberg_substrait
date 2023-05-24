@@ -177,7 +177,7 @@ class RelUpdateVisitor(RelVisitor):
                 if this_id is not None:
                     # field_indices.append(this_id - 1) # when using current_schema
                     field_indices.append(this_id)
-
+            print("Field Indices: ", field_indices)
             if field_indices:
                 expressions = []
                 for field_index in field_indices:
