@@ -334,8 +334,9 @@ class IcebergFileDownloader:
                         if field not in reference_table.column_names:
                             print(f"{field} not in {reference_table.column_names}")
                             ref_field = current_table_schema.find_field(field)
-                            field = reference_table.column_names[ref_field.field_id]
-                            print("Rerouted: >> ", ref_field, field)
+                            field = reference_table.column_names[ref_field.field_id - 1] # -1 for get the index
+                            print("Rerouted: >> ", ref_field, " :: ", field)
+                            return field
                         else:
                             return field
 
