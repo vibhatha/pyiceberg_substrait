@@ -48,7 +48,7 @@ class DuckdbSubstrait:
         ## pyiceberg_parameters
         
         # used in DataScan(selected_fields=*)
-        self._selected_fields, self._selected_fields_aliases = self.extract_fields()
+        self._selected_fields, self._selected_fields_aliases = self.extract_fields(self._sql_query)
 
     @property
     def plan(self):
