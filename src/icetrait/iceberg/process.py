@@ -330,19 +330,27 @@ class IcebergFileDownloader:
                     # project_empty_table = empty_table.select(projected_empty_table_col_names)
                     # print("project_empty_table")
                     # print(project_empty_table)
+                    def get_absolute_name(field, reference_table):
+                        if field not in reference_table.column_names:
+                            print(f"{field} not in {reference_table.column_names}")
+                            ref_field = current_table_schema.find_field(field)
+                            field = reference_table.column_names[ref_field.field_id]
+                            print("Rerouted: >> ", ref_field, field)
+                        else:
+                            return field
+
                     def create_columns_for_select(selected_fields:List[str], reference_table:pa.Table):
                         num_fields = len(selected_fields)
                         if len(selected_fields) == 1:
-                            return selected_fields[0]
+                            if selected_fields[0] == "*":
+                                return selected_fields[0]
+                            else:
+                                return get_absolute_name(selected_fields[0], reference_table)
                         statement = ""
                         for idx, field in enumerate(selected_fields):
                             # if the field is not in the empty table
                             # we must track the correct name from table_schema
-                            if field not in reference_table.column_names:
-                                print(f"{field} not in {reference_table.column_names}")
-                                ref_field = current_table_schema.find_field(field)
-                                field = reference_table.column_names[ref_field.field_id]
-                                print("Rerouted: >> ", ref_field, field)
+                            field = get_absolute_name(field, reference_table)
                             if idx != num_fields - 1:
                                 statement = statement + field + ", "
                             else:
