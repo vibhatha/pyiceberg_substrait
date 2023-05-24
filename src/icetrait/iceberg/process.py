@@ -330,8 +330,19 @@ class IcebergFileDownloader:
                     # project_empty_table = empty_table.select(projected_empty_table_col_names)
                     # print("project_empty_table")
                     # print(project_empty_table)
-                    
-                    editor = arrow_table_to_substrait(empty_table)
+                    def create_columns_for_select(selected_fields:List[str]):
+                        num_fields = len(selected_fields)
+                        if selected_fields[0] == "*":
+                            return selected_fields[0]
+                        statement = ""
+                        for idx, field in enumerate(selected_fields):
+                            if idx != len(num_fields) - 1:
+                                statement = statement + field + ", "
+                            else:
+                                statement = statement + field
+                        return statement
+
+                    editor = arrow_table_to_substrait_with_select(empty_table, selected_columns=create_columns_for_select(selected_fields=selected_fields))
                     schema_visitor = SchemaUpdateVisitor()
                     visit_and_update(editor.rel, schema_visitor)
                     base_schema = schema_visitor.base_schema
@@ -358,6 +369,23 @@ def arrow_table_to_substrait(pyarrow_table: pa.Table):
     con.execute(f"CREATE TABLE {temp_table_name} AS SELECT * FROM {arrow_table_name}").arrow()
     con.execute(f"INSERT INTO {temp_table_name} SELECT * FROM {arrow_table_name}").arrow()
     select_query = f"SELECT * FROM {temp_table_name};"
+    proto_bytes = con.get_substrait(select_query).fetchone()[0]
+    editor = SubstraitPlanEditor(proto_bytes)
+    return editor
+
+def arrow_table_to_substrait_with_select(pyarrow_table: pa.Table, selected_columns:str):
+    ## initialize duckdb
+    con = duckdb.connect()
+    con.install_extension("substrait")
+    con.load_extension("substrait")
+    # Note that the function argument pyarrow_table is used in the query
+    # if the parameter name changed, please change the arrow_table_name
+    arrow_table_name = "pyarrow_table"
+    temp_table_name = "tmp_table"
+    con.execute(f"DROP TABLE IF EXISTS {temp_table_name}")
+    con.execute(f"CREATE TABLE {temp_table_name} AS SELECT * FROM {arrow_table_name}").arrow()
+    con.execute(f"INSERT INTO {temp_table_name} SELECT * FROM {arrow_table_name}").arrow()
+    select_query = f"SELECT {selected_columns} FROM {temp_table_name};"
     proto_bytes = con.get_substrait(select_query).fetchone()[0]
     editor = SubstraitPlanEditor(proto_bytes)
     return editor
