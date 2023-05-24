@@ -339,8 +339,10 @@ class IcebergFileDownloader:
                             # if the field is not in the empty table
                             # we must track the correct name from table_schema
                             if field not in reference_table.column_names:
+                                print(f"{field} not in {reference_table.column_names}")
                                 ref_field = current_table_schema.find_field(field)
                                 field = reference_table.column_names[ref_field.field_id]
+                                print("Rerouted: >> ", ref_field, field)
                             if idx != num_fields - 1:
                                 statement = statement + field + ", "
                             else:
