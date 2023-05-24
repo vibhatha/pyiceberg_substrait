@@ -241,8 +241,8 @@ class IcebergFileDownloader:
         table = sc.table
         tasks = sc.plan_files()
         scheme, _ = PyArrowFileIO.parse_location(table.location())
-
-        projected_schema = sc.projection()
+        current_table_schema = table.schema()
+        projected_schema = sc.projection() # do we need to use this
         
         if isinstance(table.io, PyArrowFileIO):
             fs = table.io.get_fs(scheme)
@@ -291,6 +291,7 @@ class IcebergFileDownloader:
                                        if not isinstance(projected_schema.find_type(id), (MapType, ListType))}
                 file_project_schema = prune_columns(file_schema, projected_field_ids, select_full_types=False)
                 
+                # TODO: the following comment is outdated : VERIFY
                 # we use physical_schema as the executable Substrait plan's base_schema
                 # we use columns=[col.name for col in file_project_schema.columns] as file column names of the
                 # loading data stage
@@ -298,7 +299,9 @@ class IcebergFileDownloader:
                 # for each file the names should be the same so just extract values for the first file
                 if len(root_rel_names) == 0:
                     # TODO: this logic becomes faulty when the user ask for partial amount of columns
-                    for field in projected_schema.fields:
+                    # for field in projected_schema.fields:
+                    #     root_rel_names.append(field.name)
+                    for field in current_table_schema.fields:
                         root_rel_names.append(field.name)
                         
                 # get base_schema
@@ -339,7 +342,6 @@ class IcebergFileDownloader:
                     print("Projected Ids")
                     print(projected_field_ids)
 
-        current_table_schema = table.schema()
         return download_paths, extensions, base_schema, root_rel_names, current_table_schema
 
 
