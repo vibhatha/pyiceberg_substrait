@@ -110,12 +110,13 @@ class IcebergSubstraitRelVisitor(RelVisitor):
 class RelUpdateVisitor(RelVisitor):
     ## TODO: rename this to ReadRelUpdateVisitor
     
-    def __init__(self, files: List[str], formats: List[str], base_schema=None, output_names=None, projection_fields=None):
+    def __init__(self, files: List[str], formats: List[str], base_schema=None, output_names=None, projection_fields=None, current_schema=None):
         self._files = files
         self._formats = formats
         self._base_schema = base_schema
         self._output_names = output_names
         self._projection_fields = projection_fields
+        self._current_schema = current_schema
     
     def visit_aggregate(self, rel: AggregateRel):
         pass
@@ -151,6 +152,8 @@ class RelUpdateVisitor(RelVisitor):
             for output_name in self._output_names:
                 idx = get_field_index(self._base_schema, output_name)
                 # TODO: do we need validation for None value?
+                if idx == None:
+                    idx = self._current_schema.find_field(output_name).field_id - 1 # -1 is to get the index value
                 field_indices.append(idx)
 
             if field_indices:
