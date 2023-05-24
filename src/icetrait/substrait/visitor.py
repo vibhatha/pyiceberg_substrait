@@ -213,20 +213,19 @@ class RelUpdateVisitor(RelVisitor):
         #                         struct_item.field = starting_index
         #                         starting_index = starting_index + 1
         #                         projection.select.struct_items.append(struct_item)
-        if self._projection_fields:
-                if read_rel.HasField("projection"):
-                    if read_rel.projection.HasField("select"):
-                        if read_rel.projection.select.struct_items:
-                            from substrait.gen.proto.algebra_pb2 import Expression
-                            projection = read_rel.projection
-                            new_struct_items = projection.select.struct_items
-                            print(type(new_struct_items))
-                            new_projection = Expression.MaskExpression()
-                            for project_id in self._projection_fields:
-                                struct_item = Expression.MaskExpression.StructItem()
-                                struct_item.field = project_id
-                                new_projection.select.struct_items.append(struct_item)
-                            projection.CopyFrom(new_projection)
+        # if self._projection_fields:
+        #         if read_rel.HasField("projection"):
+        #             if read_rel.projection.HasField("select"):
+        #                 if read_rel.projection.select.struct_items:
+        #                     from substrait.gen.proto.algebra_pb2 import Expression
+        #                     projection = read_rel.projection
+        #                     new_struct_items = projection.select.struct_items
+        #                     new_projection = Expression.MaskExpression()
+        #                     for project_id in self._projection_fields:
+        #                         struct_item = Expression.MaskExpression.StructItem()
+        #                         struct_item.field = project_id
+        #                         new_projection.select.struct_items.append(struct_item)
+        #                     projection.CopyFrom(new_projection)
         
 
     def visit_set(self, rel: SetRel):
