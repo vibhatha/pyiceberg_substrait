@@ -330,8 +330,11 @@ class IcebergFileDownloader:
                     visit_and_update(editor.rel, schema_visitor)
                     base_schema = schema_visitor.base_schema
                     print("*" * 80)
+                    print("Projected Schema")
                     print(projected_schema)
                     print("*" * 80)
+                    print("Projected Ids")
+                    print(projected_field_ids)
                 
         return download_paths, extensions, base_schema, root_rel_names
 
