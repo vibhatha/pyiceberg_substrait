@@ -110,11 +110,12 @@ class IcebergSubstraitRelVisitor(RelVisitor):
 class RelUpdateVisitor(RelVisitor):
     ## TODO: rename this to ReadRelUpdateVisitor
     
-    def __init__(self, files: List[str], formats: List[str], base_schema=None, output_names=None):
+    def __init__(self, files: List[str], formats: List[str], base_schema=None, output_names=None, projection_fields=None):
         self._files = files
         self._formats = formats
         self._base_schema = base_schema
         self._output_names = output_names
+        self._projection_fields = projection_fields
     
     def visit_aggregate(self, rel: AggregateRel):
         pass
@@ -199,6 +200,20 @@ class RelUpdateVisitor(RelVisitor):
         #                         struct_item.field = starting_index
         #                         starting_index = starting_index + 1
         #                         projection.select.struct_items.append(struct_item)
+        if self._projection_fields:
+                if read_rel.HasField("projection"):
+                    if read_rel.projection.HasField("select"):
+                        if read_rel.projection.select.struct_items:
+                            from substrait.gen.proto.algebra_pb2 import Expression
+                            projection = read_rel.projection
+                            new_struct_items = projection.select.struct_items
+                            print(type(new_struct_items))
+                            new_projection = Expression.MaskExpression()
+                            for project_id in self._projection_fields:
+                                struct_item = Expression.MaskExpression.StructItem()
+                                struct_item.field = project_id - 1
+                                new_projection.select.struct_items.append(struct_item)
+                            projection.CopyFrom(new_projection)
         
 
     def visit_set(self, rel: SetRel):

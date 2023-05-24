@@ -152,7 +152,7 @@ class DuckdbSubstrait:
         # with s3 urls to local files 
         # Issue: https://github.com/duckdb/duckdb/discussions/7252
         downloader = IcebergFileDownloader(catalog=self._catalog_name, table=self.table_name_with_schema, local_path=self._local_path)
-        self._files, self._formats, base_schema, root_rel_names = downloader.download(selected_fields=self._selected_fields)
+        self._files, self._formats, base_schema, root_rel_names, projection_fields = downloader.download(selected_fields=self._selected_fields)
         output_names = []
         if self._selected_fields == ["*"]:
             output_names = root_rel_names
@@ -162,7 +162,7 @@ class DuckdbSubstrait:
         print(self._selected_fields)
         print("output_names")
         print(output_names)
-        update_visitor = RelUpdateVisitor(files=self._files, formats=self._formats, base_schema=base_schema, output_names=output_names)
+        update_visitor = RelUpdateVisitor(files=self._files, formats=self._formats, base_schema=base_schema, output_names=output_names, projection_fields=projection_fields)
         editor = SubstraitPlanEditor(self._updated_plan.SerializeToString())
         visit_and_update(editor.rel, update_visitor)
         # TODO: if selected_fields = [*], we need to make sure we update the names accordingly

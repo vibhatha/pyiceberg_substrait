@@ -21,7 +21,9 @@ import pyarrow as pa
 
 from icetrait.substrait.visitor import SubstraitPlanEditor, SchemaUpdateVisitor, visit_and_update
 
+import icetrait as icet
 
+DEBUG = int(icet.DEBUG) == 1
 
 ONE_MEGABYTE = 1024 * 1024
 ICEBERG_SCHEMA = b"iceberg.schema"
@@ -256,6 +258,7 @@ class IcebergFileDownloader:
         file_schema = None
         physical_schema = None
         base_schema = None
+        projected_field_ids = None
         for task in tasks:    
             _, parquet_file_path = PyArrowFileIO.parse_location(task.file.file_path)
             arrow_format = ds.ParquetFileFormat(pre_buffer=True, buffer_size=(ONE_MEGABYTE * 8))
@@ -336,7 +339,7 @@ class IcebergFileDownloader:
                     print("Projected Ids")
                     print(projected_field_ids)
                 
-        return download_paths, extensions, base_schema, root_rel_names
+        return download_paths, extensions, base_schema, root_rel_names, projected_field_ids
 
 
 def arrow_table_to_substrait(pyarrow_table: pa.Table):
