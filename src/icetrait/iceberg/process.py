@@ -340,7 +340,7 @@ class IcebergFileDownloader:
                     print(projected_field_ids)
 
         current_table_schema = table.schema()
-        return download_paths, extensions, base_schema, root_rel_names, projected_field_ids, current_table_schema
+        return download_paths, extensions, base_schema, root_rel_names, current_table_schema
 
 
 def arrow_table_to_substrait(pyarrow_table: pa.Table):
