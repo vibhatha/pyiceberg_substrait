@@ -223,11 +223,27 @@ class DuckdbSubstrait:
             for idx, name in enumerate(base_schema.names):
                 if name == value:
                     return idx
-        base_schema_names = base_schema.names       
-        for item in output_names:
-            if item in base_schema_names:
-                index = find_index(base_schema=base_schema, value=item)
-                projection_fields.append(index)
+                
+        def find_index_in_iceberg_schema(schema, field):
+            for field in schema.fields():
+                print(field.field_id)
+            
+        # base_schema_names = base_schema.names       
+        # for item in output_names:
+        #     if item in base_schema_names:
+        #         index = find_index(base_schema=base_schema, value=item)
+        #         projection_fields.append(index)
+        
+                
+        # here we have to do a few things
+        # 1. Take a look at the current schema
+        # 2. Take a look at the selected_fields
+        # 3. 
+        
+        for col in output_names:
+            field = current_schema.find_field(col)
+            projection_fields.append(field.field_id - 1)
+        
 
         update_visitor = RelUpdateVisitor(files=self._files, formats=self._formats, base_schema=base_schema, output_names=output_names, projection_fields=projection_fields)
         editor = SubstraitPlanEditor(self._updated_plan.SerializeToString())
