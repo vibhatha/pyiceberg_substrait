@@ -139,22 +139,32 @@ class RelUpdateVisitor(RelVisitor):
         pass
     
     def visit_project(self, project_rel: ProjectRel):
-        # from substrait.gen.proto.algebra_pb2 import Expression
-        # if project_rel.expressions and self._output_names:
-        #     expressions = project_rel.expressions
-        #     len_out_schm = len(self._output_names)
-        #     len_exprs = len(expressions)
-        #     if len_exprs < len_out_schm:
-        #         start_index = len_exprs
-        #         for _ in range(len_out_schm - len_exprs):
-        #             expression = Expression()
-        #             field_reference = expression.FieldReference()
-        #             root_reference = Expression.FieldReference.RootReference()
-        #             field_reference.direct_reference.struct_field.field = start_index
-        #             field_reference.root_reference.CopyFrom(root_reference)
-        #             expression.selection.CopyFrom(field_reference)
-        #             project_rel.expressions.append(expression)
-        pass
+        from substrait.gen.proto.algebra_pb2 import Expression
+        if project_rel.expressions and self._output_names:
+            expressions = project_rel.expressions
+            field_indices = []
+            def get_field_index(base_schema, field_name):
+                for idx, name in enumerate(base_schema.names):
+                    if name == field_name:
+                        return idx
+                return None
+            for output_name in self._output_names:
+                idx = get_field_index(self._base_schema, output_name)
+                if idx:
+                    field_indices.append(idx)
+                else:
+                    print(f"Error occurred in getting field name {output_name} from {self._base_schema.names}")
+                    pass
+
+            if field_indices:
+                for field_index in field_indices:
+                    expression = Expression()
+                    field_reference = expression.FieldReference()
+                    root_reference = Expression.FieldReference.RootReference()
+                    field_reference.direct_reference.struct_field.field = field_index
+                    field_reference.root_reference.CopyFrom(root_reference)
+                    expression.selection.CopyFrom(field_reference)
+                    project_rel.expressions.append(expression)
     
     def visit_read(self, read_rel: ReadRel):
         # TODO: optimize this via a Visitor
