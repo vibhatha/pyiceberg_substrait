@@ -332,11 +332,11 @@ class IcebergFileDownloader:
                     # print(project_empty_table)
                     def create_columns_for_select(selected_fields:List[str]):
                         num_fields = len(selected_fields)
-                        if selected_fields[0] == "*":
+                        if len(selected_fields) == 1:
                             return selected_fields[0]
                         statement = ""
                         for idx, field in enumerate(selected_fields):
-                            if idx != len(num_fields) - 1:
+                            if idx != num_fields - 1:
                                 statement = statement + field + ", "
                             else:
                                 statement = statement + field
