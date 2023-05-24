@@ -309,27 +309,6 @@ class IcebergFileDownloader:
                     print("Table before update")
                     print(empty_table)
 
-                    ## TODO: following logic is unnecessary remove it. 
-                    #struct = projected_schema.as_struct()
-                    # projected_empty_table_col_names = []
-                    # for index, field in enumerate(struct.fields):
-                    #     field_id = field.field_id
-                    #     name = self._find_field(file_project_schema, field_id)
-                    #     if name is None:
-                    #         # TODO: it would be better to add an empty pa.array with
-                    #         # the accurate data type
-                    #         empty_table = empty_table.add_column(index, field.name, [[]])
-                    #         name = field.name
-                    #     projected_empty_table_col_names.append(name)
-                    
-                    # print("Table after update")
-                    # print(empty_table)
-                    
-                    # TODO : I think we don't need to update the base_schema of the plan according to 
-                    # the selected columns. Instead we give the full schema from the arrow table. 
-                    # project_empty_table = empty_table.select(projected_empty_table_col_names)
-                    # print("project_empty_table")
-                    # print(project_empty_table)
                     def get_absolute_name(field, reference_table):
                         if field not in reference_table.column_names:
                             print(f"{field} not in {reference_table.column_names}")
@@ -369,6 +348,12 @@ class IcebergFileDownloader:
                     print("*" * 80)
                     print("Projected Ids")
                     print(projected_field_ids)
+                    print("+" * 80)
+                    print("Empty Table Based Plan")
+                    print("#" * 80)
+                    print(editor.plan)
+                    print("#" * 80)
+                    print("+" * 80)
 
         return download_paths, extensions, base_schema, root_rel_names, current_table_schema
 
