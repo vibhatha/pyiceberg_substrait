@@ -308,21 +308,22 @@ class IcebergFileDownloader:
                     empty_table = pa.Table.from_pylist([], physical_schema)
                     print("Table before update")
                     print(empty_table)
-                    struct = projected_schema.as_struct()
-                    projected_empty_table_col_names = []
-                    for index, field in enumerate(struct.fields):
-                        field_id = field.field_id
-                        name = self._find_field(file_project_schema, field_id)
-                        if name is None:
-                            # TODO: it would be better to add an empty pa.array with
-                            # the accurate data type
-                            empty_table = empty_table.add_column(index, field.name, [[]])
-                            name = field.name
-                        projected_empty_table_col_names.append(name)
-                        print("Name is not none: ", name)
+
+                    ## TODO: following logic is unnecessary remove it. 
+                    #struct = projected_schema.as_struct()
+                    # projected_empty_table_col_names = []
+                    # for index, field in enumerate(struct.fields):
+                    #     field_id = field.field_id
+                    #     name = self._find_field(file_project_schema, field_id)
+                    #     if name is None:
+                    #         # TODO: it would be better to add an empty pa.array with
+                    #         # the accurate data type
+                    #         empty_table = empty_table.add_column(index, field.name, [[]])
+                    #         name = field.name
+                    #     projected_empty_table_col_names.append(name)
                     
-                    print("Table after update")
-                    print(empty_table)
+                    # print("Table after update")
+                    # print(empty_table)
                     
                     # TODO : I think we don't need to update the base_schema of the plan according to 
                     # the selected columns. Instead we give the full schema from the arrow table. 
