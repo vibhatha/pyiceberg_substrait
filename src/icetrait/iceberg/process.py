@@ -322,11 +322,13 @@ class IcebergFileDownloader:
                     print("Table after update")
                     print(empty_table)
                     
-                    project_empty_table = empty_table.select(projected_empty_table_col_names)
-                    print("project_empty_table")
-                    print(project_empty_table)
+                    # TODO : I think we don't need to update the base_schema of the plan according to 
+                    # the selected columns. Instead we give the full schema from the arrow table. 
+                    # project_empty_table = empty_table.select(projected_empty_table_col_names)
+                    # print("project_empty_table")
+                    # print(project_empty_table)
                     
-                    editor = arrow_table_to_substrait(project_empty_table)
+                    editor = arrow_table_to_substrait(empty_table)
                     schema_visitor = SchemaUpdateVisitor()
                     visit_and_update(editor.rel, schema_visitor)
                     base_schema = schema_visitor.base_schema
