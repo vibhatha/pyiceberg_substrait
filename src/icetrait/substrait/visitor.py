@@ -152,31 +152,24 @@ class RelUpdateVisitor(RelVisitor):
 
             # if output name (or mapped name) is not current_schema, remove the
             # corresponding field_indices
-            # def get_id(current_schema, val):
-            #     for field in current_schema.fields:
-            #         if field.name == val:
-            #             return field.field_id
-            #     return None
-
-            def get_id(base_schema, val):
-                for idx, name in enumerate(base_schema.names):
-                    if name == val:
-                        return idx
+            def get_id(current_schema, val):
+                for field in current_schema.fields:
+                    if field.name == val:
+                        return field.field_id
                 return None
 
-            # TODO: is this duplicate?
-            # def get_id(current_schema, val):
-            #     for field in current_schema.fields:
-            #         if field.name == val:
-            #             return field.field_id
+            # def get_id(base_schema, val):
+            #     for idx, name in enumerate(base_schema.names):
+            #         if name == val:
+            #             return idx
             #     return None
 
             for output_name in self._output_names:
-                #this_id = get_id(self._current_schema, output_name) # when using current_schema
-                this_id = get_id(self._base_schema, output_name)
+                this_id = get_id(self._current_schema, output_name) # when using current_schema
+                # this_id = get_id(self._base_schema, output_name)
                 if this_id is not None:
-                    # field_indices.append(this_id - 1) # when using current_schema
-                    field_indices.append(this_id)
+                    field_indices.append(this_id - 1) # when using current_schema
+                    # field_indices.append(this_id)
             print("Field Indices: ", field_indices)
             if field_indices:
                 expressions = []
