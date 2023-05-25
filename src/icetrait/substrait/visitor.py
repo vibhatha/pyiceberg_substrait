@@ -218,14 +218,28 @@ class RelUpdateVisitor(RelVisitor):
             read_rel.base_schema.CopyFrom(self._base_schema)
         
         # TODO: optimize this logic using a visitor
-        if self._projection_fields:
+        # if self._projection_fields:
+        #         if read_rel.HasField("projection"):
+        #             if read_rel.projection.HasField("select"):
+        #                 if read_rel.projection.select.struct_items:
+        #                     from substrait.gen.proto.algebra_pb2 import Expression
+        #                     projection = read_rel.projection
+        #                     new_projection = Expression.MaskExpression()
+        #                     for project_id in self._projection_fields:
+        #                         struct_item = Expression.MaskExpression.StructItem()
+        #                         struct_item.field = project_id
+        #                         new_projection.select.struct_items.append(struct_item)
+        #                     projection.CopyFrom(new_projection)
+        # NOTE: Let's try to create projection for all columns in base_schema
+        if self._base_schema.names:
                 if read_rel.HasField("projection"):
                     if read_rel.projection.HasField("select"):
                         if read_rel.projection.select.struct_items:
                             from substrait.gen.proto.algebra_pb2 import Expression
                             projection = read_rel.projection
                             new_projection = Expression.MaskExpression()
-                            for project_id in self._projection_fields:
+
+                            for project_id in range(len(self._base_schema.names)):
                                 struct_item = Expression.MaskExpression.StructItem()
                                 struct_item.field = project_id
                                 new_projection.select.struct_items.append(struct_item)

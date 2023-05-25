@@ -234,7 +234,7 @@ class DuckdbSubstrait:
                 index = find_index(base_schema=base_schema, value=item)
                 projection_fields.append(index)
         
-
+        # NOTE: evaluate the issue here, the projection in ReadRel or ProjectRel needs to be updated. Evaluate carefully.
         update_visitor = RelUpdateVisitor(files=self._files, formats=self._formats, base_schema=base_schema, current_schema=current_schema, output_names=output_names, projection_fields=projection_fields)
         editor = SubstraitPlanEditor(self._updated_plan.SerializeToString())
         visit_and_update(editor.rel, update_visitor)
