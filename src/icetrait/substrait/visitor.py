@@ -182,7 +182,7 @@ class RelUpdateVisitor(RelVisitor):
                         # this means that the output_name is invalid. Because there is no such field
                         raise(f">>>>> Major isssue: invalid output name {output_name}")
 
-            logging.info("Field Indices: ", field_indices)
+            logging.info("Field Indices: %s", field_indices)
             if field_indices:
                 expressions = []
                 for field_index in field_indices:
