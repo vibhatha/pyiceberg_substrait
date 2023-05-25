@@ -144,32 +144,37 @@ class RelUpdateVisitor(RelVisitor):
         if project_rel.expressions and self._output_names:
             expressions = project_rel.expressions
             field_indices = []
-            def found_field_index(base_schema, field_name):
-                for idx, name in enumerate(base_schema.names):
-                    if name == field_name:
-                        return True
-                return False
-
             # if output name (or mapped name) is not current_schema, remove the
             # corresponding field_indices
-            def get_id(current_schema, val):
-                for field in current_schema.fields:
+            def get_id_from_current_schema(current_schema, val):
+                for idx, field in enumerate(current_schema.fields):
                     if field.name == val:
-                        return field.field_id
+                        return idx
                 return None
 
-            # def get_id(base_schema, val):
-            #     for idx, name in enumerate(base_schema.names):
-            #         if name == val:
-            #             return idx
-            #     return None
+            def get_id_from_base_schema(base_schema, val):
+                for idx, name in enumerate(base_schema.names):
+                    if name == val:
+                        return idx
+                return None
 
+            # TODO: here is the issue, we need to find the field from base_schema if it is not there
+            # then we have to find it from the current_schema and put the corresponding id
             for output_name in self._output_names:
-                this_id = get_id(self._current_schema, output_name) # when using current_schema
-                # this_id = get_id(self._base_schema, output_name)
-                if this_id is not None:
-                    field_indices.append(this_id - 1) # when using current_schema
-                    # field_indices.append(this_id)
+                # first search in base_schema
+                base_ref = get_id_from_base_schema(self._base_schema, output_name)
+                if base_ref is not None:
+                    field_indices.append(base_ref)
+                else:
+                    # output_name is not in base_schema, probably because of a rename schema evolution case
+                    # then we search it in the current_schema of the table in PyIceberg
+                    cur_ref = get_id_from_current_schema(self._current_schema, output_name)
+                    if cur_ref is not None:
+                        field_indices.append(cur_ref)
+                    else:
+                        # this means that the output_name is invalid. Because there is no such field
+                        print(f">>>>> Major isssue: invalid output name {output_name}")
+
             print("Field Indices: ", field_indices)
             if field_indices:
                 expressions = []
