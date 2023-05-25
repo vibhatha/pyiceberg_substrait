@@ -19,6 +19,12 @@ from icetrait.substrait.visitor import (ExtractTableVisitor,
                                         extract_rel_from_plan,
                                         visit_and_update
                                         )
+## Introducing logging
+import logging
+from icetrait.logging.logger import IcetraitLogger
+
+icetrait_logger = IcetraitLogger(file_name="icetrait.duckdb.wrapper.log")
+logging.basicConfig(filename=icetrait_logger.log_path, encoding='utf-8', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class DuckdbSubstrait:
     
@@ -207,26 +213,17 @@ class DuckdbSubstrait:
             output_names = root_rel_names
         else: 
             output_names = self._selected_fields
-        print("self._selected_fields")
-        print(self._selected_fields)
-        print("output_names")
-        print(output_names)
+        logging.info("self._selected_fields")
+        logging.info(self._selected_fields)
+        logging.info("output_names")
+        logging.info(output_names)
         projection_fields = []
-        print(current_schema)
-        # fields = current_schema.fields
-        # for relative_id, field in enumerate(fields):
-        #     if field.name in base_schema.names:
-        #         print("Field Found : ", relative_id, field.name)
-        #         #  TODO: you have to put the relative index according to the base_schema (full schema?)
-        #         projection_fields.append(relative_id)
+        logging.info(current_schema)
+
         def find_index(base_schema, value):
             for idx, name in enumerate(base_schema.names):
                 if name == value:
                     return idx
-                
-        def find_index_in_iceberg_schema(schema, field):
-            for field in schema.fields():
-                print(field.field_id)
             
         base_schema_names = base_schema.names       
         for item in output_names:
@@ -238,15 +235,6 @@ class DuckdbSubstrait:
         update_visitor = RelUpdateVisitor(files=self._files, formats=self._formats, base_schema=base_schema, current_schema=current_schema, output_names=output_names, projection_fields=projection_fields)
         editor = SubstraitPlanEditor(self._updated_plan.SerializeToString())
         visit_and_update(editor.rel, update_visitor)
-        # TODO: if selected_fields = [*], we need to make sure we update the names accordingly
-        # assert len(root_rel_names) == len(existing_root_rel_names)
-        # update output names
-        # if editor.plan.relations:
-        #     relations = editor.plan.relations
-        #     if relations:
-        #         if relations[0].HasField("root"):
-        #             rel_root = relations[0].root
-        #             rel_root.names[:] = output_names
         self._updated_plan = editor.plan
 
     @property

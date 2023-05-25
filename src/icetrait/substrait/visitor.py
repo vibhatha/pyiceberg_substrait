@@ -21,6 +21,13 @@ RelType = TypeVar("RelType")
 
 from functools import singledispatch
 
+## Introducing logging
+import logging
+from icetrait.logging.logger import IcetraitLogger
+
+icetrait_logger = IcetraitLogger(file_name="icetrait.substrait.visitor.log")
+logging.basicConfig(filename=icetrait_logger.log_path, encoding='utf-8', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
 class RelVisitor(ABC):
     
     @abstractmethod
@@ -173,9 +180,9 @@ class RelUpdateVisitor(RelVisitor):
                         field_indices.append(cur_ref)
                     else:
                         # this means that the output_name is invalid. Because there is no such field
-                        print(f">>>>> Major isssue: invalid output name {output_name}")
+                        raise(f">>>>> Major isssue: invalid output name {output_name}")
 
-            print("Field Indices: ", field_indices)
+            logging.info("Field Indices: ", field_indices)
             if field_indices:
                 expressions = []
                 for field_index in field_indices:
@@ -214,21 +221,8 @@ class RelUpdateVisitor(RelVisitor):
         
         if self._base_schema:
             read_rel.base_schema.CopyFrom(self._base_schema)
-        
-        # TODO: optimize this logic using a visitor
-        # if self._projection_fields:
-        #         if read_rel.HasField("projection"):
-        #             if read_rel.projection.HasField("select"):
-        #                 if read_rel.projection.select.struct_items:
-        #                     from substrait.gen.proto.algebra_pb2 import Expression
-        #                     projection = read_rel.projection
-        #                     new_projection = Expression.MaskExpression()
-        #                     for project_id in self._projection_fields:
-        #                         struct_item = Expression.MaskExpression.StructItem()
-        #                         struct_item.field = project_id
-        #                         new_projection.select.struct_items.append(struct_item)
-        #                     projection.CopyFrom(new_projection)
-        # NOTE: Let's try to create projection for all columns in base_schema
+
+        # NOTE: create projection for all columns in base_schema visit_project projects required fields
         if self._base_schema.names:
                 if read_rel.HasField("projection"):
                     if read_rel.projection.HasField("select"):
@@ -380,7 +374,7 @@ def _(rel: ProjectRel, visitor: RelUpdateVisitor) -> RelType:
 
 @visit_and_update.register(FetchRel)
 def _(rel: FetchRel, visitor: RelUpdateVisitor):
-    print("@visit_and_update.register(FetchRel)")
+    logging.info("@visit_and_update.register(FetchRel)")
     visitor.visit_fetch(rel)
     if rel.HasField("input"):
         visit_and_update(rel.input, visitor)

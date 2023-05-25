@@ -26,6 +26,13 @@ import icetrait as icet
 ONE_MEGABYTE = 1024 * 1024
 ICEBERG_SCHEMA = b"iceberg.schema"
 
+## Introducing logging
+import logging
+from icetrait.logging.logger import IcetraitLogger
+
+icetrait_logger = IcetraitLogger(file_name="icetrait.iceberg.process.log")
+logging.basicConfig(filename=icetrait_logger.log_path, encoding='utf-8', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
 class ProcessSubstrait:
     
     def __init__(self, plan:str):
@@ -136,7 +143,7 @@ class ProcessSubstrait:
             if relations:
                 if relations[0].HasField("root"):
                     rel_root = relations[0].root
-                    print("RelRoot : ", type(rel_root))
+                    logging.info("RelRoot : ", type(rel_root))
                     rel = rel_root.input
                     return self.visit_rel(rel)
         return None
@@ -148,49 +155,49 @@ class ProcessSubstrait:
                 aggregate = rel.aggregate
                 if aggregate.HasField("input"):
                     input = aggregate.input
-                    print(type(aggregate), type(input))
+                    logging.info(type(aggregate), type(input))
                     return self.visit_rel(input)
             elif rel.HasField("cross"):
                 cross = rel.cross
                 if cross.HasField("input"):
                     input = cross.input
-                    print(type(cross), type(input))
+                    logging.info(type(cross), type(input))
                     return self.visit_rel(input)
             elif rel.HasField("fetch"):
                 fetch = rel.fetch
                 if fetch.HasField("input"):
                     input = fetch.input
-                    print(type(fetch), type(input))
+                    logging.info(type(fetch), type(input))
                     return self.visit_rel(input)
             elif rel.HasField("filter"):
                 filter = rel.filter
                 if filter.HasField("input"):
                     input = filter.input
-                    print(type(filter), type(input))
+                    logging.info(type(filter), type(input))
                     return self.visit_rel(input)
             elif rel.HasField("hash_join"):
                 hash_join = rel.hash_join
                 if hash_join.HasField("input"):
                     input = hash_join.input
-                    print(type(hash_join), type(input))
+                    logging.info(type(hash_join), type(input))
                     return self.visit_rel(input)
             elif rel.HasField("join"):
                 join = rel.join
                 if join.HasField("input"):
                     input = join.input
-                    print(type(join), type(input))
+                    logging.info(type(join), type(input))
                     return self.visit_rel(input)
             elif rel.HasField("merge_join"):
                 merge_join = rel.merge_join
                 if merge_join.HasField("input"):
                     input = merge_join.input
-                    print(type(merge_join), type(input))
+                    logging.info(type(merge_join), type(input))
                     return self.visit_rel(input)
             if rel.HasField("project"):
                 project = rel.project
                 if project.HasField("input"):
                     input = project.input
-                    print(type(project), type(input))
+                    logging.info(type(project), type(input))
                     return self.visit_rel(input)
             elif rel.HasField("read"):
                 return rel.read
@@ -198,13 +205,13 @@ class ProcessSubstrait:
                 set = rel.set
                 if set.HasField("input"):
                     input = set.input
-                    print(type(set), type(input))
+                    logging.info(type(set), type(input))
                     return self.visit_rel(input)
             elif rel.HasField("sort"):
                 sort = rel.sort
                 if sort.HasField("input"):
                     input = sort.input
-                    print(type(sort), type(input))
+                    logging.info(type(sort), type(input))
                     return self.visit_rel(input)
             else:
                 raise Exception("Invalid relation!")
@@ -308,15 +315,15 @@ class IcebergFileDownloader:
                 # get base_schema
                 if base_schema is None:
                     empty_table = pa.Table.from_pylist([], physical_schema)
-                    print("Table before update")
-                    print(empty_table)
+                    logging.info("Table before update")
+                    logging.info(empty_table)
 
                     def get_absolute_name(field, reference_table):
                         if field not in reference_table.column_names:
-                            print(f"{field} not in {reference_table.column_names}")
+                            logging.info(f"{field} not in {reference_table.column_names}")
                             ref_field = current_table_schema.find_field(field)
                             field = reference_table.column_names[ref_field.field_id - 1] # -1 for get the index
-                            print("Rerouted: >> ", ref_field, " :: ", field)
+                            logging.info("Rerouted: >> ", ref_field, " :: ", field)
                             return field
                         else:
                             return field
@@ -344,18 +351,18 @@ class IcebergFileDownloader:
                     schema_visitor = SchemaUpdateVisitor()
                     visit_and_update(editor.rel, schema_visitor)
                     base_schema = schema_visitor.base_schema
-                    print("*" * 80)
-                    print("Projected Schema")
-                    print(projected_schema)
-                    print("*" * 80)
-                    print("Projected Ids")
-                    print(projected_field_ids)
-                    print("+" * 80)
-                    print("Empty Table Based Plan")
-                    print("#" * 80)
-                    print(editor.plan)
-                    print("#" * 80)
-                    print("+" * 80)
+                    logging.info("*" * 80)
+                    logging.info("Projected Schema")
+                    logging.info(projected_schema)
+                    logging.info("*" * 80)
+                    logging.info("Projected Ids")
+                    logging.info(projected_field_ids)
+                    logging.info("+" * 80)
+                    logging.info("Empty Table Based Plan")
+                    logging.info("#" * 80)
+                    logging.info(editor.plan)
+                    logging.info("#" * 80)
+                    logging.info("+" * 80)
 
         return download_paths, extensions, base_schema, root_rel_names, current_table_schema
 
