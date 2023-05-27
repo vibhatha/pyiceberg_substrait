@@ -22,11 +22,13 @@ RelType = TypeVar("RelType")
 from functools import singledispatch
 
 ## Introducing logging
+import os
 import logging
 from icetrait.logging.logger import IcetraitLogger
 
 icetrait_logger = IcetraitLogger(file_name="icetrait.substrait.visitor.log")
 logging.basicConfig(filename=icetrait_logger.log_path, encoding='utf-8', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+icetrait_logger.disabled = True if os.getenv("ICETRAIT_LOGGING") == "ENABLE" else False
 
 class RelVisitor(ABC):
     

@@ -27,11 +27,13 @@ ONE_MEGABYTE = 1024 * 1024
 ICEBERG_SCHEMA = b"iceberg.schema"
 
 ## Introducing logging
+import os
 import logging
 from icetrait.logging.logger import IcetraitLogger
 
 icetrait_logger = IcetraitLogger(file_name="icetrait.iceberg.process.log")
 logging.basicConfig(filename=icetrait_logger.log_path, encoding='utf-8', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+icetrait_logger.disabled = True if os.getenv("ICETRAIT_LOGGING") == "ENABLE" else False
 
 class ProcessSubstrait:
     
