@@ -8,13 +8,23 @@ from pyiceberg.catalog import Catalog
 from pyiceberg.table import Table as IcebergTable
 
 from pyiceberg.io.pyarrow import PyArrowFileIO
+from pyiceberg.schema import Schema, prune_columns
+from pyiceberg.types import MapType, ListType
 
 import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 
 from icetrait.utils.files import get_filename_and_extension
 
+import duckdb
+import pyarrow as pa
+
+from icetrait.substrait.visitor import SubstraitPlanEditor, SchemaUpdateVisitor, visit_and_update
+
+import icetrait as icet
+
 ONE_MEGABYTE = 1024 * 1024
+ICEBERG_SCHEMA = b"iceberg.schema"
 
 class ProcessSubstrait:
     
@@ -218,16 +228,35 @@ class IcebergFileDownloader:
     def table(self) -> IcebergTable:
         return self._table
     
-    def download(self):
-        sc = self.table.scan()
+    def _find_field(self, file_project_schema, field_id):
+        name = None
+        try:
+            name = file_project_schema.find_field(field_id).name
+        except ValueError:
+            return name
+        return name
+    
+    def download(self, selected_fields:List[str]):
+        sc = self.table.scan(selected_fields=selected_fields)
         table = sc.table
         tasks = sc.plan_files()
         scheme, _ = PyArrowFileIO.parse_location(table.location())
-
+        current_table_schema = table.schema()
+        projected_schema = sc.projection() # do we need to use this
+        
         if isinstance(table.io, PyArrowFileIO):
             fs = table.io.get_fs(scheme)
         download_paths = []
         extensions = []
+        # TODO: see if we can extract the file_schema, output_schema, output_field_names
+        # physical_schema from this method itself, then we can use those values in RelUpdateVisitor
+        # and update the file paths and base_schema from a single call.
+        
+        root_rel_names = []
+        file_schema = None
+        physical_schema = None
+        base_schema = None
+        projected_field_ids = None
         for task in tasks:    
             _, parquet_file_path = PyArrowFileIO.parse_location(task.file.file_path)
             arrow_format = ds.ParquetFileFormat(pre_buffer=True, buffer_size=(ONE_MEGABYTE * 8))
@@ -246,4 +275,89 @@ class IcebergFileDownloader:
                 pq.write_table(arrow_table, save_file_path)
                 download_paths.append(save_file_path)
                 extensions.append(file_ext.split(".")[1])
-        return download_paths, extensions
+                
+                schema_raw = None
+                if metadata := physical_schema.metadata:
+                    schema_raw = metadata.get(ICEBERG_SCHEMA)
+                if schema_raw is None:
+                    raise ValueError(
+                        "Iceberg schema is not embedded into the Parquet file, see https://github.com/apache/iceberg/issues/6505"
+                    )
+                file_schema = Schema.parse_raw(schema_raw)
+                # note that the find_type(id) would retrieve the field based on the unique id
+                # schema evolution is guaranteed by the unique id definition for each column 
+                # irrespective of the RUD operation (READ, UPDATE, DELETE)
+                projected_field_ids = {id for id in projected_schema.field_ids \
+                                       if not isinstance(projected_schema.find_type(id), (MapType, ListType))}
+                file_project_schema = prune_columns(file_schema, projected_field_ids, select_full_types=False)
+                
+                # TODO: the following comment is outdated : VERIFY
+                # we use physical_schema as the executable Substrait plan's base_schema
+                # we use columns=[col.name for col in file_project_schema.columns] as file column names of the
+                # loading data stage
+                
+                # for each file the names should be the same so just extract values for the first file
+                if len(root_rel_names) == 0:
+                    # TODO: this logic becomes faulty when the user ask for partial amount of columns
+                    for field in projected_schema.fields:
+                        root_rel_names.append(field.name)
+                    
+                        
+                # get base_schema
+                if base_schema is None:
+                    empty_table = pa.Table.from_pylist([], physical_schema)
+                    print("Table before update")
+                    print(empty_table)
+
+                    ## TODO: following logic is unnecessary remove it. 
+                    #struct = projected_schema.as_struct()
+                    # projected_empty_table_col_names = []
+                    # for index, field in enumerate(struct.fields):
+                    #     field_id = field.field_id
+                    #     name = self._find_field(file_project_schema, field_id)
+                    #     if name is None:
+                    #         # TODO: it would be better to add an empty pa.array with
+                    #         # the accurate data type
+                    #         empty_table = empty_table.add_column(index, field.name, [[]])
+                    #         name = field.name
+                    #     projected_empty_table_col_names.append(name)
+                    
+                    # print("Table after update")
+                    # print(empty_table)
+                    
+                    # TODO : I think we don't need to update the base_schema of the plan according to 
+                    # the selected columns. Instead we give the full schema from the arrow table. 
+                    # project_empty_table = empty_table.select(projected_empty_table_col_names)
+                    # print("project_empty_table")
+                    # print(project_empty_table)
+                    
+                    editor = arrow_table_to_substrait(empty_table)
+                    schema_visitor = SchemaUpdateVisitor()
+                    visit_and_update(editor.rel, schema_visitor)
+                    base_schema = schema_visitor.base_schema
+                    print("*" * 80)
+                    print("Projected Schema")
+                    print(projected_schema)
+                    print("*" * 80)
+                    print("Projected Ids")
+                    print(projected_field_ids)
+
+        return download_paths, extensions, base_schema, root_rel_names, current_table_schema
+
+
+def arrow_table_to_substrait(pyarrow_table: pa.Table):
+    ## initialize duckdb
+    con = duckdb.connect()
+    con.install_extension("substrait")
+    con.load_extension("substrait")
+    # Note that the function argument pyarrow_table is used in the query
+    # if the parameter name changed, please change the arrow_table_name
+    arrow_table_name = "pyarrow_table"
+    temp_table_name = "tmp_table"
+    con.execute(f"DROP TABLE IF EXISTS {temp_table_name}")
+    con.execute(f"CREATE TABLE {temp_table_name} AS SELECT * FROM {arrow_table_name}").arrow()
+    con.execute(f"INSERT INTO {temp_table_name} SELECT * FROM {arrow_table_name}").arrow()
+    select_query = f"SELECT * FROM {temp_table_name};"
+    proto_bytes = con.get_substrait(select_query).fetchone()[0]
+    editor = SubstraitPlanEditor(proto_bytes)
+    return editor

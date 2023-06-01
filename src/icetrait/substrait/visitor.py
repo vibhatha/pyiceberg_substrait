@@ -108,10 +108,15 @@ class IcebergSubstraitRelVisitor(RelVisitor):
         pass
 
 class RelUpdateVisitor(RelVisitor):
+    ## TODO: rename this to ReadRelUpdateVisitor
     
-    def __init__(self, files: List[str], formats: List[str]):
+    def __init__(self, files: List[str], formats: List[str], base_schema=None, output_names=None, projection_fields=None, current_schema=None):
         self._files = files
         self._formats = formats
+        self._base_schema = base_schema
+        self._output_names = output_names
+        self._projection_fields = projection_fields
+        self._current_schema = current_schema
     
     def visit_aggregate(self, rel: AggregateRel):
         pass
@@ -134,10 +139,34 @@ class RelUpdateVisitor(RelVisitor):
     def visit_merge(self, rel: MergeJoinRel):
         pass
     
-    def visit_project(self, rel: ProjectRel):
-        pass
+    def visit_project(self, project_rel: ProjectRel):
+        from substrait.gen.proto.algebra_pb2 import Expression
+        if project_rel.expressions and self._output_names:
+            expressions = project_rel.expressions
+            field_indices = []
+            def found_field_index(base_schema, field_name):
+                for idx, name in enumerate(base_schema.names):
+                    if name == field_name:
+                        return True
+                return False
+
+            field_indices = [i for i in range(len(self._output_names))]
+
+            if field_indices:
+                expressions = []
+                for field_index in field_indices:
+                    expression = Expression()
+                    field_reference = expression.FieldReference()
+                    root_reference = Expression.FieldReference.RootReference()
+                    field_reference.direct_reference.struct_field.field = field_index
+                    field_reference.root_reference.CopyFrom(root_reference)
+                    expression.selection.CopyFrom(field_reference)
+                    expressions.append(expression)
+                del project_rel.expressions[:]
+                project_rel.expressions.extend(expressions)
     
     def visit_read(self, read_rel: ReadRel):
+        # TODO: optimize this via a Visitor
         local_files = read_rel.LocalFiles()
         for file, file_format in zip(self._files, self._formats):
             file_or_files = local_files.FileOrFiles()
@@ -158,6 +187,24 @@ class RelUpdateVisitor(RelVisitor):
                 raise ValueError(f"Unsupported file format {file_format}")
             local_files.items.append(file_or_files)
         read_rel.local_files.CopyFrom(local_files)
+        
+        if self._base_schema:
+            read_rel.base_schema.CopyFrom(self._base_schema)
+        
+        # TODO: optimize this logic using a visitor
+        if self._projection_fields:
+                if read_rel.HasField("projection"):
+                    if read_rel.projection.HasField("select"):
+                        if read_rel.projection.select.struct_items:
+                            from substrait.gen.proto.algebra_pb2 import Expression
+                            projection = read_rel.projection
+                            new_projection = Expression.MaskExpression()
+                            for project_id in self._projection_fields:
+                                struct_item = Expression.MaskExpression.StructItem()
+                                struct_item.field = project_id
+                                new_projection.select.struct_items.append(struct_item)
+                            projection.CopyFrom(new_projection)
+        
 
     def visit_set(self, rel: SetRel):
         pass
@@ -277,7 +324,8 @@ def _(rel: Rel, visitor: RelUpdateVisitor) -> RelType:
     elif rel.HasField("sort"):
         visit_and_update(rel.sort, visitor)
     else:
-        raise Exception("Invalid relation!")
+        val = rel.HasField("fetch")
+        raise Exception(f"Invalid relation! {val}")
 
 
 @visit_and_update.register(ReadRel)
@@ -290,6 +338,15 @@ def _(rel: ProjectRel, visitor: RelUpdateVisitor) -> RelType:
     visitor.visit_project(rel)
     if rel.HasField("input"):
         visit_and_update(rel.input, visitor)
+
+
+@visit_and_update.register(FetchRel)
+def _(rel: FetchRel, visitor: RelUpdateVisitor):
+    print("@visit_and_update.register(FetchRel)")
+    visitor.visit_fetch(rel)
+    if rel.HasField("input"):
+        visit_and_update(rel.input, visitor)
+
 
 
 ## Helper Visitor to update the schema information in a DuckDB generated
@@ -335,10 +392,44 @@ class NamedTableUpdateVisitor(RelVisitor):
         def visit_sort(self, rel):
             pass
 
-class SchemaUpdateVisitor(IcebergSubstraitRelVisitor):
-    
-    def __init__(self, base_schema) -> None:
-        self._base_schema = base_schema
-    
-    def visit_read(self, rel: ReadRel):
-        pass
+
+class SchemaUpdateVisitor(RelVisitor):
+        def __init__(self):
+            self._base_schema = None
+            
+        @property
+        def base_schema(self):
+            return self._base_schema
+
+        def visit_aggregate(self, rel):
+            pass
+
+        def visit_cross(self, rel):
+            pass
+
+        def visit_fetch(self, rel):
+            pass
+
+        def visit_filter(self, rel):
+            pass
+
+        def visit_join(self, rel):
+            pass
+
+        def visit_hashjoin(self, rel):
+            pass
+
+        def visit_merge(self, rel):
+            pass
+
+        def visit_project(self, rel):
+            pass
+
+        def visit_read(self, read_rel):
+            self._base_schema = read_rel.base_schema
+
+        def visit_set(self, rel):
+            pass
+
+        def visit_sort(self, rel):
+            pass
