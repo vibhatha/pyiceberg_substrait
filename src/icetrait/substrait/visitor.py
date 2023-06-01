@@ -149,6 +149,7 @@ class RelUpdateVisitor(RelVisitor):
         pass
     
     def visit_project(self, project_rel: ProjectRel):
+        # TODO: https://github.com/vibhatha/pyiceberg_substrait/issues/29
         from substrait.gen.proto.algebra_pb2 import Expression
         if project_rel.expressions and self._output_names:
             expressions = project_rel.expressions
@@ -158,6 +159,8 @@ class RelUpdateVisitor(RelVisitor):
             def get_id_from_current_schema(current_schema, val):
                 for idx, field in enumerate(current_schema.fields):
                     if field.name == val:
+                        # here we would get the relative location from the
+                        # current schema (evolved Iceberg table).
                         return idx
                 return None
 
@@ -169,20 +172,23 @@ class RelUpdateVisitor(RelVisitor):
 
             # TODO: here is the issue, we need to find the field from base_schema if it is not there
             # then we have to find it from the current_schema and put the corresponding id
+            # here the self._output_names refers column names extracted from the current Iceberg
+            # table schema.
             for output_name in self._output_names:
                 # first search in base_schema
                 base_ref = get_id_from_base_schema(self._base_schema, output_name)
                 if base_ref is not None:
+                    # found the field and we get the index relative to the base_schema
                     field_indices.append(base_ref)
                 else:
                     # output_name is not in base_schema, probably because of a rename schema evolution case
-                    # then we search it in the current_schema of the table in PyIceberg
+                    # then we search it in the current_schema of the Iceberg table
                     cur_ref = get_id_from_current_schema(self._current_schema, output_name)
                     if cur_ref is not None:
                         field_indices.append(cur_ref)
                     else:
                         # this means that the output_name is invalid. Because there is no such field
-                        raise(f">>>>> Major isssue: invalid output name {output_name}")
+                        raise(f"Major isssue: invalid output name {output_name}")
 
             logging.info("Field Indices: %s", field_indices)
             if field_indices:
@@ -224,7 +230,7 @@ class RelUpdateVisitor(RelVisitor):
         if self._base_schema:
             read_rel.base_schema.CopyFrom(self._base_schema)
 
-        # NOTE: create projection for all columns in base_schema visit_project projects required fields
+        # NOTE: create projection for all columns in base_schema, visit_project method projects required fields
         if self._base_schema.names:
                 if read_rel.HasField("projection"):
                     if read_rel.projection.HasField("select"):

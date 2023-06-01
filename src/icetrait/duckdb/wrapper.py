@@ -251,10 +251,8 @@ class DuckdbSubstrait:
         return query_result
 
 
-def run_query(plan: SubstraitPlan, catalog_name:str, local_path:str, duckdb_schema:str):
-    def setup_func():
-        return duckdb.connect()
-    wrapper = DuckdbSubstrait(plan=plan, catalog_name=catalog_name, local_path=local_path, duckdb_schema=duckdb_schema, setup_func=setup_func)
+def run_query(catalog_name:str, local_path:str, duckdb_schema:str, sql_query:str, setup_func):
+    wrapper = DuckdbSubstrait(catalog_name=catalog_name, local_path=local_path, duckdb_schema=duckdb_schema, sql_query=sql_query, setup_func=setup_func)
     wrapper.update_named_table_with_schema()
     wrapper.update_with_local_file_paths()
     return wrapper.execute()
