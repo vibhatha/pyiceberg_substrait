@@ -256,10 +256,15 @@ class ExtractTableVisitor(RelVisitor):
     
     def __init__(self) -> None:
         self._table_names = None
+        self._read_rel = None
         
     @property
     def table_names(self):
         return self._table_names
+    
+    @property
+    def read_rel(self):
+        return self._read_rel
         
     def visit_aggregate(self, rel: AggregateRel):
         pass
@@ -286,6 +291,7 @@ class ExtractTableVisitor(RelVisitor):
         pass
     
     def visit_read(self, read_rel: ReadRel):
+        self._read_rel = read_rel
         named_table = read_rel.named_table
         self._table_names = named_table.names
         
