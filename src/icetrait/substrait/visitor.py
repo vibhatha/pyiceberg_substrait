@@ -257,18 +257,23 @@ class ExtractTableVisitor(RelVisitor):
     def __init__(self) -> None:
         self._table_names = None
         self._read_rel = None
-        
+        self._project_rel = None
+
     @property
     def table_names(self):
         return self._table_names
-    
+
     @property
     def read_rel(self):
         return self._read_rel
-        
+
+    @property
+    def project_rel(self):
+        return self._project_rel
+
     def visit_aggregate(self, rel: AggregateRel):
         pass
-    
+
     def visit_cross(self, rel: CrossRel):
         pass
     
@@ -287,8 +292,8 @@ class ExtractTableVisitor(RelVisitor):
     def visit_merge(self, rel: MergeJoinRel):
         pass
     
-    def visit_project(self, rel: ProjectRel):
-        pass
+    def visit_project(self, project_rel: ProjectRel):
+        self._project_rel = project_rel
     
     def visit_read(self, read_rel: ReadRel):
         self._read_rel = read_rel
